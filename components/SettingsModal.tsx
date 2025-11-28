@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, Server, Bot, HelpCircle } from 'lucide-react';
+import { X, Save, Server, Bot, HelpCircle, Database, Trash2, CheckCircle2 } from 'lucide-react';
 import { AppSettings, AIConfig, WebDAVConfig } from '../types';
 
 interface SettingsModalProps {
@@ -8,12 +8,16 @@ interface SettingsModalProps {
   onClose: () => void;
   settings: AppSettings;
   onSave: (settings: AppSettings) => Promise<void>;
+  onClearTrash?: () => Promise<void>;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings, onSave }) => {
-  const [activeTab, setActiveTab] = useState<'ai' | 'webdav'>('ai');
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings, onSave, onClearTrash }) => {
+  const [activeTab, setActiveTab] = useState<'ai' | 'webdav' | 'data'>('ai');
   const [formData, setFormData] = useState<AppSettings>(settings);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Trash state
+  const [trashStatus, setTrashStatus] = useState<'idle' | 'clearing' | 'cleared'>('idle');
 
   useEffect(() => {
     if (isOpen) {
@@ -30,7 +34,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
       let finalSettings = { ...formData };
       if (finalSettings.ai.provider === 'gemini') {
         finalSettings.ai.url = 'https://generativelanguage.googleapis.com/v1beta'; 
-        finalSettings.ai.model = 'gemini-2.5-flash'; // Updated default
+        finalSettings.ai.model = 'gemini-2.5-flash'; 
       }
       
       await onSave(finalSettings);
@@ -57,6 +61,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
     }));
   };
 
+  const handleClearTrash = async () => {
+    if (!onClearTrash) return;
+    if (trashStatus === 'cleared') return;
+    
+    // Simple state confirmation instead of window.confirm
+    setTrashStatus('clearing');
+    try {
+        await onClearTrash();
+        setTrashStatus('cleared');
+        setTimeout(() => setTrashStatus('idle'), 3000);
+    } catch (e) {
+        setTrashStatus('idle');
+        alert('清空失败');
+    }
+  };
+
   const isGemini = formData.ai.provider === 'gemini';
 
   return (
@@ -72,10 +92,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b bg-gray-50/50">
+        <div className="flex border-b bg-gray-50/50 overflow-x-auto">
           <button
             onClick={() => setActiveTab('ai')}
-            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
+            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors min-w-[80px] ${
               activeTab === 'ai' ? 'border-flomo-green text-flomo-green bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -84,12 +104,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
           </button>
           <button
             onClick={() => setActiveTab('webdav')}
-            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
+            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors min-w-[80px] ${
               activeTab === 'webdav' ? 'border-flomo-green text-flomo-green bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             <Server size={16} />
-            WebDAV 同步
+            同步
+          </button>
+          <button
+            onClick={() => setActiveTab('data')}
+            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors min-w-[80px] ${
+              activeTab === 'data' ? 'border-flomo-green text-flomo-green bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Database size={16} />
+            数据
           </button>
         </div>
 
@@ -211,6 +240,36 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                 />
                </div>
             </div>
+          )}
+
+          {/* Data Management */}
+          {activeTab === 'data' && (
+              <div className="space-y-6">
+                  <div className="p-4 bg-red-50 rounded-lg border border-red-100">
+                      <div className="flex items-center gap-2 text-red-700 font-bold mb-2">
+                          <Trash2 size={18} />
+                          <h3>废纸篓</h3>
+                      </div>
+                      <p className="text-xs text-red-600 mb-4 leading-relaxed">
+                          已删除的笔记会保留 30 天，期间可以同步到云端（标记为删除）。
+                          清空废纸篓将永久删除这些笔记和关联图片，不可恢复。
+                      </p>
+                      <button 
+                        onClick={handleClearTrash}
+                        disabled={trashStatus !== 'idle'}
+                        className={`
+                            w-full py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2
+                            ${trashStatus === 'cleared' 
+                                ? 'bg-green-600 text-white' 
+                                : 'bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300'}
+                        `}
+                      >
+                          {trashStatus === 'idle' && '立即清空废纸篓'}
+                          {trashStatus === 'clearing' && '清理中...'}
+                          {trashStatus === 'cleared' && <><CheckCircle2 size={16} /> 已清理</>}
+                      </button>
+                  </div>
+              </div>
           )}
 
         </div>

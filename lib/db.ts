@@ -2,7 +2,7 @@
 import { Note, Asset, AppSettings } from '../types';
 
 const DB_NAME = 'flomo_clone_db';
-const DB_VERSION = 3; // Upgraded for synced_assets and schema changes
+const DB_VERSION = 4; // Upgraded for deleted_assets_queue
 
 class FlomoDB {
   private db: IDBDatabase | null = null;
@@ -49,6 +49,11 @@ class FlomoDB {
         if (!db.objectStoreNames.contains('synced_assets')) {
           db.createObjectStore('synced_assets', { keyPath: 'id' });
         }
+
+        // Deleted Assets Queue (Track assets to be deleted from remote)
+        if (!db.objectStoreNames.contains('deleted_assets_queue')) {
+            db.createObjectStore('deleted_assets_queue', { keyPath: 'id' });
+        }
       };
     });
 
@@ -89,8 +94,21 @@ class FlomoDB {
     }
   }
 
+  // Hard delete: Physically remove note and its assets
   async hardDeleteNote(id: string): Promise<void> {
     await this.ensureInit();
+    
+    // 1. Get the note to find assets
+    const note = await this.getNote(id);
+    
+    // 2. Delete associated assets
+    if (note && note.assetIds && note.assetIds.length > 0) {
+        for (const assetId of note.assetIds) {
+            await this.deleteAsset(assetId);
+        }
+    }
+
+    // 3. Delete the note
     await this.tx('notes', 'readwrite', (store) => store.delete(id));
   }
 
@@ -118,6 +136,17 @@ class FlomoDB {
     }
   }
 
+  // Manually empty trash
+  async deleteAllTrash(): Promise<void> {
+    await this.ensureInit();
+    const notes = await this.getAllNotes();
+    for (const note of notes) {
+        if (note.isDeleted) {
+            await this.hardDeleteNote(note.id);
+        }
+    }
+  }
+
   // --- Assets Operations ---
 
   async addAsset(blob: Blob): Promise<string> {
@@ -131,6 +160,20 @@ class FlomoDB {
     };
     await this.tx('assets', 'readwrite', (store) => store.put(asset));
     return id;
+  }
+
+  // Delete asset locally and queue for remote deletion
+  async deleteAsset(id: string): Promise<void> {
+    await this.ensureInit();
+    
+    // 1. Delete from local assets
+    await this.tx('assets', 'readwrite', (store) => store.delete(id));
+    
+    // 2. Delete from synced_assets status (it's no longer synced since it's gone)
+    await this.tx('synced_assets', 'readwrite', (store) => store.delete(id));
+
+    // 3. Add to deletion queue for next sync
+    await this.tx('deleted_assets_queue', 'readwrite', (store) => store.put({ id }));
   }
 
   // Save an asset with a specific ID (from Sync)
@@ -151,6 +194,19 @@ class FlomoDB {
     await this.ensureInit();
     const result = await this.tx<Asset>('assets', 'readonly', (store) => store.get(id));
     return result;
+  }
+
+  // --- Deletion Queue Operations ---
+  
+  async getDeletionQueue(): Promise<string[]> {
+    await this.ensureInit();
+    const items = await this.tx<{id: string}[]>('deleted_assets_queue', 'readonly', (store) => store.getAll());
+    return items.map(i => i.id);
+  }
+
+  async removeFromDeletionQueue(id: string): Promise<void> {
+    await this.ensureInit();
+    await this.tx('deleted_assets_queue', 'readwrite', (store) => store.delete(id));
   }
 
   // --- Sync State for Assets ---

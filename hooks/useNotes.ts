@@ -164,8 +164,27 @@ export function useNotes() {
     await loadData();
   };
 
+  const updateNoteContent = async (id: string, newContent: string) => {
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+    
+    const updatedNote = {
+      ...note,
+      content: newContent,
+      updatedAt: Date.now()
+    };
+    
+    await db.updateNote(updatedNote);
+    await loadData();
+  };
+
   const deleteNote = async (id: string) => {
     await db.softDeleteNote(id);
+    await loadData();
+  };
+
+  const clearTrash = async () => {
+    await db.deleteAllTrash();
     await loadData();
   };
 
@@ -255,7 +274,9 @@ export function useNotes() {
     settings,
     isLoading,
     addNote,
+    updateNoteContent,
     deleteNote,
+    clearTrash,
     uploadAsset,
     updateSettings,
     getTodayNotes,

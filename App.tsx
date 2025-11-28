@@ -41,7 +41,9 @@ function App() {
     settings,
     isLoading, 
     addNote, 
+    updateNoteContent,
     deleteNote,
+    clearTrash,
     uploadAsset,
     updateSettings,
     getTodayNotes,
@@ -252,7 +254,12 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
                   </div>
                 ) : (
                   displayNotes.map(note => (
-                    <NoteCard key={note.id} note={note} onDelete={deleteNote} />
+                    <NoteCard 
+                        key={note.id} 
+                        note={note} 
+                        onDelete={deleteNote} 
+                        onUpdate={updateNoteContent}
+                    />
                   ))
                 )}
               </div>
@@ -284,6 +291,7 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
         onClose={() => setSettingsOpen(false)}
         settings={settings}
         onSave={updateSettings}
+        onClearTrash={clearTrash}
       />
 
     </div>

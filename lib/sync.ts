@@ -27,7 +27,24 @@ export async function syncNotes(config: WebDAVConfig, onProgress?: (msg: string)
   if (!(await client.exists(NOTES_FOLDER))) await client.mkcol(NOTES_FOLDER);
   if (!(await client.exists(ASSETS_FOLDER))) await client.mkcol(ASSETS_FOLDER);
 
-  // 2. Prepare Local Data Grouped by Week
+  // 2. Process Deletion Queue (Remove remote assets)
+  onProgress?.('清理已删除的资源...');
+  const deletionQueue = await db.getDeletionQueue();
+  if (deletionQueue.length > 0) {
+      for (const assetId of deletionQueue) {
+          try {
+              // Delete from WebDAV
+              await client.delete(`${ASSETS_FOLDER}/${assetId}`);
+              // Remove from queue on success (or if 404 which client.delete handles)
+              await db.removeFromDeletionQueue(assetId);
+          } catch (e) {
+              console.warn(`Failed to delete remote asset ${assetId}:`, e);
+              // We leave it in the queue to try again next time
+          }
+      }
+  }
+
+  // 3. Prepare Local Data Grouped by Week
   onProgress?.('正在整理本地数据...');
   const localNotes = await db.getAllNotes();
   const localGroups = new Map<string, Note[]>();
@@ -38,7 +55,7 @@ export async function syncNotes(config: WebDAVConfig, onProgress?: (msg: string)
     localGroups.get(key)!.push(note);
   });
 
-  // 3. List Remote Files (Lazy Loading Strategy)
+  // 4. List Remote Files (Lazy Loading Strategy)
   onProgress?.('获取远程文件列表...');
   const remoteFiles = await client.listFiles(NOTES_FOLDER);
   // Sort descending: Process newest weeks first for "Lazy Load" effect in UI
@@ -52,7 +69,7 @@ export async function syncNotes(config: WebDAVConfig, onProgress?: (msg: string)
   // Convert to array and sort desc
   const sortedKeys = Array.from(allKeys).sort().reverse();
 
-  // 4. Sync Each Week
+  // 5. Sync Each Week
   let processedCount = 0;
   for (const key of sortedKeys) {
     onProgress?.(`正在同步: ${key} (${processedCount + 1}/${sortedKeys.length})`);

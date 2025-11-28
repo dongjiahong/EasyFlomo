@@ -169,7 +169,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div className="flex items-center gap-2">
                   <img src="/logo.svg" alt="Logo" className="w-8 h-8" />
                   <span className="font-bold text-lg text-gray-800 tracking-tight">EasyFlomo</span>
-                  <span className="bg-gray-800 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">PRO</span>
               </div>
               <div className="flex items-center gap-1">
                 <button 

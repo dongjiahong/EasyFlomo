@@ -82,6 +82,14 @@ export class WebDAVClient {
     return await response.blob();
   }
 
+  async delete(path: string): Promise<void> {
+    const response = await this.request('DELETE', path);
+    if (!response.ok && response.status !== 404) {
+       // Ignore 404 (already deleted)
+       throw new Error(`Failed to delete file: ${path}`);
+    }
+  }
+
   // Parse directory listing
   async listFiles(path: string): Promise<WebDAVFile[]> {
     const response = await this.request('PROPFIND', path, null, { 'Depth': '1' });
