@@ -117,55 +117,51 @@ export async function syncNotes(config: WebDAVConfig, onProgress?: (msg: string)
         }
     }
 
-    // D. Upload if changed (Local > Remote or New Local)
-    // We compare finalNotes with the original remoteNotes string to see if we need to PUT
-    const finalContent = JSON.stringify(finalNotes);
-    // Simple check: if remote didn't exist, or length different, or content different.
-    // Optimization: We set hasChanges=true above if we merged a local winner.
-    // But we also need to check if we merged a remote winner into a file that didn't have it?
-    // Actually, if we merged, finalNotes is the source of truth.
-    // If remoteFile existed, we compare. If not, we upload.
-    
-    // To minimize PUTs, verify if the stringified result is different from what we downloaded
-    let needsUpload = false;
-    if (!remoteFile) {
-        needsUpload = true;
-    } else {
-        // We could re-stringify remoteNotes but order might differ. 
-        // hasChanges tracks if we injected a LOCAL note into the set.
-        // But what if we just consumed remote notes and didn't change them?
-        // We only upload if *our local state* modified the shared state.
-        if (hasChanges) needsUpload = true;
-    }
-
-    // E. Sync Assets for these notes
-    // We only upload assets for notes that exist in the final merged set
+    // D. Check & Sync Assets (Upload & Download)
     for (const note of finalNotes) {
-        // Skip deleted notes assets? Maybe keep them for history or delete later?
-        // For now, simple logic: if note has assets, try sync.
-        if (note.assetIds && note.assetIds.length > 0 && !note.isDeleted) {
-            for (const assetId of note.assetIds) {
-                const isSynced = await db.isAssetSynced(assetId);
-                if (!isSynced) {
-                    const asset = await db.getAsset(assetId);
-                    if (asset) {
-                        onProgress?.(`上传图片: ${assetId.substring(0, 6)}...`);
-                        await client.put(`${ASSETS_FOLDER}/${assetId}`, asset.blob);
-                        await db.markAssetSynced(assetId);
-                    }
+        if (!note.assetIds || note.assetIds.length === 0 || note.isDeleted) continue;
+
+        for (const assetId of note.assetIds) {
+            // 1. Check if we have it locally
+            const isSynced = await db.isAssetSynced(assetId);
+            const localAsset = await db.getAsset(assetId);
+
+            if (!localAsset) {
+                // Missing locally: Download from WebDAV
+                try {
+                   onProgress?.(`下载图片: ${assetId.substring(0, 6)}...`);
+                   const blob = await client.getBlob(`${ASSETS_FOLDER}/${assetId}`);
+                   await db.saveSyncedAsset(assetId, blob);
+                } catch (e) {
+                    console.warn(`Failed to download asset ${assetId}`, e);
+                }
+            } else if (!isSynced) {
+                // We have it locally but not marked synced: Upload to WebDAV
+                try {
+                    onProgress?.(`上传图片: ${assetId.substring(0, 6)}...`);
+                    await client.put(`${ASSETS_FOLDER}/${assetId}`, localAsset.blob);
+                    await db.markAssetSynced(assetId);
+                } catch (e) {
+                    console.warn(`Failed to upload asset ${assetId}`, e);
                 }
             }
         }
     }
 
+    // E. Upload Note Shard if changed
+    let needsUpload = false;
+    if (!remoteFile) {
+        needsUpload = true; // New week file
+    } else {
+        if (hasChanges) needsUpload = true; // Local changes merged in
+    }
+
     if (needsUpload) {
+        const finalContent = JSON.stringify(finalNotes);
         await client.put(filePath, finalContent);
     }
 
     processedCount++;
-    // Notify progress listener to reload UI? 
-    // The calling function can reload data after sync completes or we could emit events.
-    // For lazy load UI effect, we would ideally reload here. 
   }
   
   onProgress?.('同步完成');

@@ -1,5 +1,5 @@
 {
-  "name": "flomo-clone",
+  "name": "EasyFlomo",
   "description": "A minimalist note-taking app clone inspired by flomo, featuring Markdown support and a clean card-based UI.",
   "requestFramePermissions": []
 }

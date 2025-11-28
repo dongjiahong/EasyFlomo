@@ -114,7 +114,6 @@ class FlomoDB {
     for (const note of notes) {
         if (note.isDeleted && note.deletedAt && (now - note.deletedAt > THIRTY_DAYS)) {
             await this.hardDeleteNote(note.id);
-            // Optionally clean up assets here if strict reference counting was implemented
         }
     }
   }
@@ -132,6 +131,20 @@ class FlomoDB {
     };
     await this.tx('assets', 'readwrite', (store) => store.put(asset));
     return id;
+  }
+
+  // Save an asset with a specific ID (from Sync)
+  async saveSyncedAsset(id: string, blob: Blob): Promise<void> {
+    await this.ensureInit();
+    const asset: Asset = {
+        id,
+        blob,
+        mimeType: blob.type,
+        createdAt: Date.now()
+    };
+    await this.tx('assets', 'readwrite', (store) => store.put(asset));
+    // Also mark as synced since it came from the server
+    await this.markAssetSynced(id);
   }
 
   async getAsset(id: string): Promise<Asset | undefined> {

@@ -74,6 +74,14 @@ export class WebDAVClient {
     return await response.text();
   }
 
+  async getBlob(path: string): Promise<Blob> {
+    const response = await this.request('GET', path);
+    if (!response.ok) {
+      throw new Error(`Failed to download blob: ${path}`);
+    }
+    return await response.blob();
+  }
+
   // Parse directory listing
   async listFiles(path: string): Promise<WebDAVFile[]> {
     const response = await this.request('PROPFIND', path, null, { 'Depth': '1' });
@@ -115,9 +123,6 @@ export class WebDAVClient {
       );
       
       // Filter out the requested directory itself
-      // Usually href ends with the requested path
-      // Simple logic: if href equals requested path (normalized), skip
-      
       const name = href.replace(/\/$/, '').split('/').pop() || '';
       
       if (name) {

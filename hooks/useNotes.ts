@@ -180,8 +180,8 @@ export function useNotes() {
 
   const sync = async () => {
     await syncNotes(settings.webdav, (msg) => {
-        // Optional: Expose progress state if needed, but simple await is fine for now
-        // Or trigger partial reloads here if we want true "Lazy Load" feedback
+        // We could expose this state if we want a progress bar
+        console.log('[Sync Progress]', msg);
     });
     await loadData();
   };
