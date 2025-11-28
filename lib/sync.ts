@@ -156,8 +156,10 @@ export async function syncNotes(config: WebDAVConfig, onProgress?: (msg: string)
                 // We have it locally but not marked synced: Upload to WebDAV
                 try {
                     onProgress?.(`上传图片: ${assetId.substring(0, 6)}...`);
-                    await client.put(`${ASSETS_FOLDER}/${assetId}`, localAsset.blob);
-                    await db.markAssetSynced(assetId);
+                    if (localAsset) {
+                      await client.put(`${ASSETS_FOLDER}/${assetId}`, localAsset.blob);
+                      await db.markAssetSynced(assetId);
+                    }
                 } catch (e) {
                     console.warn(`Failed to upload asset ${assetId}`, e);
                 }

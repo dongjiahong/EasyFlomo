@@ -10,7 +10,9 @@ const DEFAULT_SETTINGS: AppSettings = {
     provider: 'openai',
     url: 'https://api.openai.com/v1',
     apiKey: '',
-    model: 'gpt-4o'
+    model: 'gpt-4o',
+    dailyPrompt: '请阅读我今天记录的以下笔记，并为我生成一份每日总结。\n总结今天的主要想法、活动或情绪，并提出任何值得进一步思考的点。\n',
+    insightPrompt: '随机抽取了我最近的 10 条笔记，请阅读并帮我进行回顾。\n请根据这些内容，给出一个简短的洞察、总结，或者发现它们之间潜在的联系。\n风格保持轻松、启发性。'
   },
   webdav: {
     url: window.location.origin + '/webdav-proxy',
@@ -23,6 +25,7 @@ export function useNotes() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [stats, setStats] = useState<UserStats>({ noteCount: 0, tagCount: 0, dayCount: 0 });
   const [tags, setTags] = useState<TagNode[]>([]);
+  const [allTagNames, setAllTagNames] = useState<string[]>([]);
   const [heatmapData, setHeatmapData] = useState<Map<string, number>>(new Map());
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,7 +48,11 @@ export function useNotes() {
       // Load Settings
       const savedSettings = await db.getSettings();
       if (savedSettings) {
-        setSettings(savedSettings);
+        setSettings({
+            ...DEFAULT_SETTINGS,
+            ...savedSettings,
+            ai: { ...DEFAULT_SETTINGS.ai, ...savedSettings.ai } // Ensure new fields exist
+        });
       }
     } catch (error) {
       console.error('[useNotes] Failed to load data:', error);
@@ -86,6 +93,7 @@ export function useNotes() {
     });
 
     setHeatmapData(activityMap);
+    setAllTagNames(Array.from(tagCounts.keys()).sort());
 
     const rootNodes: TagNode[] = [];
     const nodeMap = new Map<string, TagNode>();
@@ -270,6 +278,7 @@ export function useNotes() {
     notes,
     stats,
     tags,
+    allTagNames, // Exported for autocomplete
     heatmapData,
     settings,
     isLoading,

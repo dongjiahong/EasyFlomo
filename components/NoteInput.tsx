@@ -5,13 +5,21 @@ import { Hash, Image as ImageIcon, Type, List, ListOrdered, Send, Loader2 } from
 interface NoteInputProps {
   onAddNote: (content: string, assetIds: string[]) => Promise<void>;
   onUploadAsset: (file: File) => Promise<string>;
+  existingTags?: string[];
 }
 
-const NoteInput: React.FC<NoteInputProps> = ({ onAddNote, onUploadAsset }) => {
+const NoteInput: React.FC<NoteInputProps> = ({ onAddNote, onUploadAsset, existingTags = [] }) => {
   const [content, setContent] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingAssets, setPendingAssets] = useState<string[]>([]);
+  
+  // Autocomplete state
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionPos, setSuggestionPos] = useState({ top: 0, left: 0 });
+  const [activeTagStart, setActiveTagStart] = useState<number | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -40,9 +48,78 @@ const NoteInput: React.FC<NoteInputProps> = ({ onAddNote, onUploadAsset }) => {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (showSuggestions) {
+        if (e.key === 'Escape') {
+            setShowSuggestions(false);
+            e.preventDefault();
+        }
+        // Basic navigation could be added here
+    }
+
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       handleSubmit();
     }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const val = e.target.value;
+      setContent(val);
+      
+      // Simple autocomplete trigger logic
+      const cursor = e.target.selectionStart;
+      // Find the word being typed
+      const textBeforeCursor = val.slice(0, cursor);
+      const hashIndex = textBeforeCursor.lastIndexOf('#');
+      
+      if (hashIndex !== -1) {
+          // Check if there's a space after the last hash (meaning we left the tag)
+          const textAfterHash = textBeforeCursor.slice(hashIndex + 1);
+          if (!/\s/.test(textAfterHash)) {
+              // We are inside a tag
+              const query = textAfterHash.toLowerCase();
+              const filtered = existingTags.filter(t => 
+                  t.toLowerCase().includes(query) && t.toLowerCase() !== query
+              );
+              
+              if (filtered.length > 0) {
+                  setSuggestions(filtered);
+                  setShowSuggestions(true);
+                  setActiveTagStart(hashIndex);
+                  
+                  // Calculate position (approximation)
+                  // In a real app, use a library like get-caret-coordinates or a hidden div mirror
+                  setSuggestionPos({ 
+                      top: 40 + (textareaRef.current?.scrollHeight || 0), // Just put it below for now
+                      left: 10 
+                  });
+              } else {
+                  setShowSuggestions(false);
+              }
+          } else {
+              setShowSuggestions(false);
+          }
+      } else {
+          setShowSuggestions(false);
+      }
+  };
+
+  const insertTag = (tag: string) => {
+      if (activeTagStart === null || !textareaRef.current) return;
+      
+      const before = content.slice(0, activeTagStart);
+      const afterCursor = content.slice(textareaRef.current.selectionStart);
+      
+      const newContent = `${before}#${tag} ${afterCursor}`;
+      setContent(newContent);
+      setShowSuggestions(false);
+      
+      setTimeout(() => {
+          if (textareaRef.current) {
+              textareaRef.current.focus();
+              const newPos = activeTagStart + tag.length + 2; // +1 for #, +1 for space
+              textareaRef.current.setSelectionRange(newPos, newPos);
+          }
+      }, 0);
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,7 +184,7 @@ const NoteInput: React.FC<NoteInputProps> = ({ onAddNote, onUploadAsset }) => {
     <div 
       className={`
         bg-white rounded-xl transition-all duration-200
-        border-2 
+        border-2 relative
         ${isFocused ? 'border-flomo-green shadow-[0_0_0_2px_rgba(60,179,113,0.1)]' : 'border-transparent shadow-sm'}
       `}
     >
@@ -124,15 +201,35 @@ const NoteInput: React.FC<NoteInputProps> = ({ onAddNote, onUploadAsset }) => {
         <textarea
           ref={textareaRef}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={handleChange}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onBlur={() => {
+              setIsFocused(false);
+              // Delay hide to allow click on suggestion
+              setTimeout(() => setShowSuggestions(false), 200);
+          }}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          placeholder="现在的想法是... (支持粘贴图片)"
+          placeholder="现在的想法是... (支持粘贴图片，输入 # 插入标签)"
           className="w-full resize-none outline-none text-gray-700 placeholder-gray-400 min-h-[60px] max-h-[400px]"
           rows={1}
         />
+        
+        {/* Suggestion Box (Simplified positioning for now) */}
+        {showSuggestions && (
+            <div className="absolute left-4 bottom-14 bg-white border border-gray-200 shadow-lg rounded-lg max-h-40 overflow-y-auto z-20 min-w-[150px]">
+                {suggestions.map(tag => (
+                    <div 
+                        key={tag}
+                        onClick={() => insertTag(tag)}
+                        className="px-3 py-2 hover:bg-green-50 text-sm text-gray-700 cursor-pointer flex items-center gap-2"
+                    >
+                        <Hash size={14} className="text-gray-400" />
+                        {tag}
+                    </div>
+                ))}
+            </div>
+        )}
       </div>
 
       <div className={`px-2 pb-2 flex items-center justify-between ${isFocused || content ? 'opacity-100' : 'opacity-60'}`}>

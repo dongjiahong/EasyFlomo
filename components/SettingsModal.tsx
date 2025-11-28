@@ -200,6 +200,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                    </div>
                  </>
                )}
+
+               <div className="pt-4 border-t border-gray-100">
+                  <h3 className="text-xs font-bold text-gray-700 mb-2">自定义提示词 (Prompts)</h3>
+                  
+                  <div className="mb-3">
+                    <label className="block text-[10px] text-gray-500 mb-1">每日总结提示词</label>
+                    <textarea 
+                      className="w-full text-xs border border-gray-300 rounded-lg p-2 outline-none focus:border-flomo-green min-h-[60px]"
+                      value={formData.ai.dailyPrompt || ''}
+                      onChange={(e) => handleAiChange('dailyPrompt', e.target.value)}
+                      placeholder="自定义每日总结的 Prompt..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-1">AI 洞察提示词</label>
+                    <textarea 
+                      className="w-full text-xs border border-gray-300 rounded-lg p-2 outline-none focus:border-flomo-green min-h-[60px]"
+                      value={formData.ai.insightPrompt || ''}
+                      onChange={(e) => handleAiChange('insightPrompt', e.target.value)}
+                      placeholder="自定义随机洞察的 Prompt..."
+                    />
+                  </div>
+               </div>
             </div>
           )}
 

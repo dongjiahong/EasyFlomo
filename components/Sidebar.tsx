@@ -9,7 +9,9 @@ import {
   Settings,
   ChevronRight,
   ChevronDown,
-  RefreshCw
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import Heatmap from './Heatmap';
 import { UserStats, TagNode } from '../types';
@@ -90,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenAIInsight,
   onSync
 }) => {
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   
   const NavButton = ({ 
     isActive, 
@@ -132,14 +134,16 @@ const Sidebar: React.FC<SidebarProps> = ({
         return;
     }
 
-    setIsSyncing(true);
+    setSyncStatus('loading');
     try {
         await onSync();
+        setSyncStatus('success');
+        setTimeout(() => setSyncStatus('idle'), 2000);
     } catch (e: any) {
         console.error(e);
+        setSyncStatus('error');
         alert(`同步失败: ${e.message}`);
-    } finally {
-        setTimeout(() => setIsSyncing(false), 800);
+        setTimeout(() => setSyncStatus('idle'), 3000);
     }
   };
 
@@ -173,11 +177,19 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div className="flex items-center gap-1">
                 <button 
                   onClick={handleSyncClick} 
-                  className="text-gray-400 hover:text-gray-600 p-1.5 hover:bg-gray-200 rounded-md transition-colors relative"
+                  className={`
+                    p-1.5 rounded-md transition-all relative
+                    ${syncStatus === 'success' ? 'text-green-600 bg-green-50' : ''}
+                    ${syncStatus === 'error' ? 'text-red-500 bg-red-50' : ''}
+                    ${syncStatus === 'idle' || syncStatus === 'loading' ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-200' : ''}
+                  `}
                   title="同步/刷新"
-                  disabled={isSyncing}
+                  disabled={syncStatus === 'loading'}
                 >
-                    <RefreshCw size={16} className={isSyncing ? 'animate-spin text-flomo-green' : ''} />
+                    {syncStatus === 'loading' && <RefreshCw size={16} className="animate-spin text-flomo-green" />}
+                    {syncStatus === 'success' && <CheckCircle2 size={16} />}
+                    {syncStatus === 'error' && <AlertCircle size={16} />}
+                    {syncStatus === 'idle' && <RefreshCw size={16} />}
                 </button>
                 <button 
                   onClick={onOpenSettings} 

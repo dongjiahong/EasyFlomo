@@ -48,6 +48,8 @@ export interface AIConfig {
   url: string;
   apiKey: string;
   model: string;
+  dailyPrompt?: string; // Custom prompt for daily review
+  insightPrompt?: string; // Custom prompt for insights
 }
 
 export interface WebDAVConfig {

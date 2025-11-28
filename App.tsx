@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Menu, Search, Filter, Loader2, Dices } from 'lucide-react';
+import { Menu, Search, Filter, Loader2, Dices, X } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import NoteInput from './components/NoteInput';
 import NoteCard from './components/NoteCard';
@@ -21,6 +21,7 @@ function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [activeView, setActiveView] = useState<'all' | 'random'>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // AI Panel State
   const [aiPanel, setAiPanel] = useState<AIPanelState>({
@@ -37,6 +38,7 @@ function App() {
     notes, 
     stats, 
     tags, 
+    allTagNames, // For autocomplete
     heatmapData,
     settings,
     isLoading, 
@@ -60,19 +62,26 @@ function App() {
     }
 
     if (activeView === 'all') {
+      let filtered = notes;
+
+      // 1. Date Filter
       if (selectedDate) {
-        // Filter by date
-        const filtered = notes.filter(n => {
+        filtered = filtered.filter(n => {
            const d = new Date(n.timestamp);
            const dateStr = d.toISOString().split('T')[0];
            return dateStr === selectedDate;
         });
-        setDisplayNotes(filtered);
-      } else {
-        setDisplayNotes(notes);
       }
+
+      // 2. Search Filter
+      if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          filtered = filtered.filter(n => n.content.toLowerCase().includes(q));
+      }
+
+      setDisplayNotes(filtered);
     }
-  }, [activeView, selectedDate, notes]);
+  }, [activeView, selectedDate, searchQuery, notes]);
 
   // Handle Heatmap Click
   const handleHeatmapClick = (date: string) => {
@@ -102,13 +111,19 @@ function App() {
       return;
     }
 
-    const prompt = `
+    const defaultPrompt = `
 请阅读我今天记录的以下笔记，并为我生成一份每日总结。
 总结今天的主要想法、活动或情绪，并提出任何值得进一步思考的点。
 
 今日笔记：
 ${todayNotes.map(n => `- ${n.content}`).join('\n')}
     `;
+
+    // Use custom prompt from settings if available, inserting notes
+    let prompt = defaultPrompt;
+    if (settings.ai.dailyPrompt) {
+        prompt = `${settings.ai.dailyPrompt}\n\n今日笔记：\n${todayNotes.map(n => `- ${n.content}`).join('\n')}`;
+    }
 
     const result = await generateAIResponse(prompt);
     setAiPanel(prev => ({ ...prev, content: result, loading: false }));
@@ -128,7 +143,7 @@ ${todayNotes.map(n => `- ${n.content}`).join('\n')}
       return;
     }
 
-    const prompt = `
+    const defaultPrompt = `
 随机抽取了我最近的 10 条笔记，请阅读并帮我进行回顾。
 请根据这些内容，给出一个简短的洞察、总结，或者发现它们之间潜在的联系。
 风格保持轻松、启发性。
@@ -136,6 +151,12 @@ ${todayNotes.map(n => `- ${n.content}`).join('\n')}
 笔记内容：
 ${randomNotes.map(n => `- ${n.content}`).join('\n')}
     `;
+
+    // Use custom prompt from settings if available
+    let prompt = defaultPrompt;
+    if (settings.ai.insightPrompt) {
+        prompt = `${settings.ai.insightPrompt}\n\n笔记内容：\n${randomNotes.map(n => `- ${n.content}`).join('\n')}`;
+    }
 
     const result = await generateAIResponse(prompt);
     setAiPanel(prev => ({ ...prev, content: result, loading: false }));
@@ -166,7 +187,7 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
           onClose={() => setSidebarOpen(false)}
           onOpenSettings={() => setSettingsOpen(true)}
           activeView={activeView}
-          onViewChange={(v) => { setActiveView(v); setSelectedDate(null); }}
+          onViewChange={(v) => { setActiveView(v); setSelectedDate(null); setSearchQuery(''); }}
           onOpenDailyReview={handleOpenDailyReview}
           onOpenAIInsight={handleOpenAIInsight}
           onSync={refresh}
@@ -187,7 +208,7 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
               </button>
               <div className="flex items-center gap-1 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded-md transition-colors select-none">
                 <span className="font-bold text-lg text-gray-800 tracking-tight">
-                  {activeView === 'all' && (selectedDate ? `筛选: ${selectedDate}` : 'MEMO')}
+                  {activeView === 'all' && (selectedDate ? `筛选: ${selectedDate}` : (searchQuery ? `搜索: ${searchQuery}` : 'MEMO'))}
                   {activeView === 'random' && '随机漫步'}
                 </span>
               </div>
@@ -201,7 +222,17 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
                     type="text" 
                     placeholder="搜索笔记..."
                     className="w-full bg-gray-100 hover:bg-white focus:bg-white border border-transparent focus:border-flomo-green/30 rounded-full py-1.5 pl-9 pr-10 outline-none transition-all duration-200 placeholder-gray-400 text-sm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                   />
+                  {searchQuery && (
+                      <button 
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                          <X size={14} />
+                      </button>
+                  )}
                 </div>
               )}
             </div>
@@ -216,8 +247,12 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
             <div className="max-w-3xl mx-auto w-full space-y-6 pt-6">
               
               {/* Input */}
-              {activeView === 'all' && !selectedDate && (
-                <NoteInput onAddNote={addNote} onUploadAsset={uploadAsset} />
+              {activeView === 'all' && !selectedDate && !searchQuery && (
+                <NoteInput 
+                    onAddNote={addNote} 
+                    onUploadAsset={uploadAsset} 
+                    existingTags={allTagNames}
+                />
               )}
 
               {/* Clear Filter Banner */}
@@ -250,7 +285,7 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
               <div className="space-y-4">
                 {displayNotes.length === 0 ? (
                   <div className="text-center py-20 text-gray-400 select-none">
-                    <p>{activeView === 'all' ? (selectedDate ? '这一天没有笔记' : '还没有笔记，记录下此刻的想法吧 ✨') : '没有更多内容了'}</p>
+                    <p>{activeView === 'all' ? (selectedDate || searchQuery ? '没有找到相关笔记' : '还没有笔记，记录下此刻的想法吧 ✨') : '没有更多内容了'}</p>
                   </div>
                 ) : (
                   displayNotes.map(note => (
