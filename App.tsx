@@ -185,10 +185,10 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
   }
 
   return (
-    <div className="h-screen w-full flex items-center justify-center bg-[#F2F2F2] p-0 md:p-6 overflow-hidden">
+    <div className="h-screen w-full flex items-center justify-center bg-[#F2F2F2] overflow-hidden">
       
       {/* Centered App Container */}
-      <div className="w-full max-w-6xl h-full md:h-[90vh] bg-white md:rounded-2xl shadow-xl flex overflow-hidden border border-gray-200">
+      <div className="w-full max-w-6xl h-full bg-white shadow-xl flex overflow-hidden border-x border-gray-200">
         
         {/* Left Sidebar */}
         <Sidebar 

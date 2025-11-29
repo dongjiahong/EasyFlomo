@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   LayoutGrid, 
@@ -173,7 +172,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           overflow-hidden
         `}
       >
-        <div className="flex-1 overflow-y-auto pt-6 px-4 pb-4">
+        {/* Fixed Top Section */}
+        <div className="shrink-0 pt-6 px-4">
             {/* User Profile Header */}
             <div className="flex items-center justify-between mb-8">
               <button 
@@ -260,17 +260,19 @@ const Sidebar: React.FC<SidebarProps> = ({
               />
             </nav>
 
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">标签</h3>
+        </div>
+
+        {/* Scrollable Tags Section */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4 scroll-smooth">
             {/* Tags Section */}
-            <div className="mb-8">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">标签</h3>
-                <div className="space-y-0.5">
-                    {tags.length === 0 && (
-                        <div className="text-xs text-gray-400 px-3">暂无标签</div>
-                    )}
-                    {tags.map(node => (
-                        <TagItem key={node.id} node={node} onTagClick={onTagClick} />
-                    ))}
-                </div>
+            <div className="space-y-0.5">
+                {tags.length === 0 && (
+                    <div className="text-xs text-gray-400 px-3">暂无标签</div>
+                )}
+                {tags.map(node => (
+                    <TagItem key={node.id} node={node} onTagClick={onTagClick} />
+                ))}
             </div>
         </div>
       </aside>

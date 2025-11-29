@@ -47,11 +47,11 @@ const Heatmap: React.FC<HeatmapProps> = ({ activityData, selectedDate, onDateCli
         data={data}
         theme={{
           // Darkened level 0 (empty) from #e5e7eb to #d1d5db (zinc-300) for better visibility against gray backgrounds
-          light: ['#d1d5db', '#9be9a8', '#40c463', '#30a14e', '#216e39'],
-          dark: ['#d1d5db', '#9be9a8', '#40c463', '#30a14e', '#216e39'],
+          light: ['#f0f0f0', '#9be9a8', '#40c463', '#30a14e', '#216e39'],
+          dark: ['#f0f0f0', '#9be9a8', '#40c463', '#30a14e', '#216e39'],
         }}
         colorScheme="light"
-        blockSize={14}
+        blockSize={18}
         blockMargin={3}
         blockRadius={3}
         fontSize={12}
