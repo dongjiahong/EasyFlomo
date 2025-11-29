@@ -6,6 +6,7 @@ import NoteInput from './components/NoteInput';
 import NoteCard from './components/NoteCard';
 import SettingsModal from './components/SettingsModal';
 import AIPanel from './components/AIPanel';
+import TrashPanel from './components/TrashPanel'; // Import TrashPanel
 import { useNotes } from './hooks/useNotes';
 import { Note } from './types';
 
@@ -19,6 +20,7 @@ interface AIPanelState {
 function App() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [isTrashOpen, setIsTrashOpen] = useState(false); // Trash state
   const [activeView, setActiveView] = useState<'all' | 'random'>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,14 +48,16 @@ function App() {
     addNote, 
     updateNoteContent,
     deleteNote,
+    restoreNote, // New function
+    permanentlyDeleteNote, // New function
+    trashedNotes, // New state
     clearTrash,
     uploadAsset,
     updateSettings,
     getTodayNotes,
     getRandomNotes,
     generateAIResponse,
-    refresh,
-    trashCount // Extract trashCount
+    refresh
   } = useNotes();
 
   // Handle View & Filter Changes
@@ -197,6 +201,7 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
           isOpen={isSidebarOpen}
           onClose={() => setSidebarOpen(false)}
           onOpenSettings={() => setSettingsOpen(true)}
+          onOpenTrash={() => setIsTrashOpen(true)} // Open Trash Panel
           activeView={activeView}
           onViewChange={(v) => { setActiveView(v); setSelectedDate(null); setSearchQuery(''); }}
           onOpenDailyReview={handleOpenDailyReview}
@@ -373,8 +378,15 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
         onClose={() => setSettingsOpen(false)}
         settings={settings}
         onSave={updateSettings}
+      />
+
+      <TrashPanel 
+        isOpen={isTrashOpen}
+        onClose={() => setIsTrashOpen(false)}
+        trashedNotes={trashedNotes}
+        onRestore={restoreNote}
+        onDeletePermanently={permanentlyDeleteNote}
         onClearTrash={clearTrash}
-        trashCount={trashCount}
       />
 
     </div>

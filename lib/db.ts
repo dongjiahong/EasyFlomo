@@ -94,6 +94,18 @@ class FlomoDB {
     }
   }
 
+  // Restore deleted note
+  async restoreNote(id: string): Promise<void> {
+    await this.ensureInit();
+    const note = await this.getNote(id);
+    if (note) {
+        note.isDeleted = false;
+        delete note.deletedAt;
+        note.updatedAt = Date.now(); // Mark as updated so it syncs
+        await this.tx('notes', 'readwrite', (store) => store.put(note));
+    }
+  }
+
   // Hard delete: Physically remove note and its assets
   async hardDeleteNote(id: string): Promise<void> {
     await this.ensureInit();

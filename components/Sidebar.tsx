@@ -11,7 +11,8 @@ import {
   ChevronDown,
   RefreshCw,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import Heatmap from './Heatmap';
 import { UserStats, TagNode } from '../types';
@@ -27,6 +28,7 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenSettings: () => void;
+  onOpenTrash: () => void;
   activeView: 'all' | 'random';
   onViewChange: (view: 'all' | 'random') => void;
   onOpenDailyReview: () => void;
@@ -89,6 +91,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   isOpen, 
   onClose, 
   onOpenSettings,
+  onOpenTrash,
   activeView,
   onViewChange,
   onOpenDailyReview,
@@ -172,7 +175,14 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         <div className="flex-1 overflow-y-auto pt-6 px-4 pb-4">
             {/* User Profile Header */}
-            <div className="flex items-center justify-end mb-8">
+            <div className="flex items-center justify-between mb-8">
+              <button 
+                  onClick={onOpenTrash} 
+                  className="text-gray-400 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-md transition-colors"
+                  title="废纸篓"
+              >
+                  <Trash2 size={16} />
+              </button>
               
               <div className="flex items-center gap-1">
                 <button 
