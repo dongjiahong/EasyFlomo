@@ -163,7 +163,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Sidebar Content */}
       <aside 
         className={`
-          absolute md:relative h-full w-64 bg-gray-50/50
+          absolute md:relative h-full w-64 bg-gray-50
           flex flex-col border-r border-gray-200
           transition-transform duration-300 z-30
           ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
@@ -172,10 +172,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         <div className="flex-1 overflow-y-auto pt-6 px-4 pb-4">
             {/* User Profile Header */}
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-2">
-                  <span className="font-bold text-lg text-gray-800 tracking-tight">EasyFlomo</span>
-              </div>
+            <div className="flex items-center justify-end mb-8">
+              
               <div className="flex items-center gap-1">
                 <button 
                   onClick={handleSyncClick} 

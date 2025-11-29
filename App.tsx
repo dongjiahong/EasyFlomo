@@ -22,6 +22,7 @@ function App() {
   const [activeView, setActiveView] = useState<'all' | 'random'>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showMobileSearchBar, setShowMobileSearchBar] = useState(false);
   
   // AI Panel State
   const [aiPanel, setAiPanel] = useState<AIPanelState>({
@@ -206,52 +207,88 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
         {/* Right Main Content */}
         <main className="flex-1 flex flex-col min-w-0 bg-white relative">
           
-          {/* Header */}
-          <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm px-4 md:px-8 py-4 flex items-center justify-between gap-4 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              {/* Mobile Sidebar Toggle */}
-              <button 
-                className="md:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-md"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <Menu size={20} />
-              </button>
-              <div className="flex items-center gap-1 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded-md transition-colors select-none">
-                <span className="font-bold text-lg text-gray-800 tracking-tight">
-                  {activeView === 'all' && (selectedDate ? `筛选: ${selectedDate}` : (searchQuery ? `搜索: ${searchQuery}` : 'MEMO'))}
-                  {activeView === 'random' && '随机漫步'}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex-1 max-w-md hidden md:block">
-              {activeView === 'all' && !selectedDate && (
-                <div className="relative group">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-flomo-green transition-colors" size={16} />
-                  <input 
-                    type="text" 
-                    placeholder="搜索笔记..."
-                    className="w-full bg-gray-100 hover:bg-white focus:bg-white border border-transparent focus:border-flomo-green/30 rounded-full py-1.5 pl-9 pr-10 outline-none transition-all duration-200 placeholder-gray-400 text-sm"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  {searchQuery && (
-                      <button 
-                        onClick={() => setSearchQuery('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                          <X size={14} />
-                      </button>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            <div className="md:hidden">
-              {activeView === 'all' && <Search className="text-gray-500" size={20} />}
-            </div>
-          </header>
-
+                    {/* Header */}
+                    <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm py-4 border-b border-gray-100">
+                                  <div className="max-w-3xl mx-auto w-full px-4 md:px-8 flex items-center justify-between gap-4">
+                                    {/* Mobile search bar visible on small screens when state is true */}
+                                    {showMobileSearchBar && (
+                                      <div className="flex flex-1 items-center relative max-w-xs mx-auto">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                        <input
+                                          type="text"
+                                          placeholder="搜索笔记..."
+                                          className="w-full bg-gray-100 hover:bg-white focus:bg-white border border-transparent focus:border-flomo-green/30 rounded-full py-1.5 pl-9 pr-10 outline-none transition-all duration-200 placeholder-gray-400 text-sm"
+                                          value={searchQuery}
+                                          onChange={(e) => setSearchQuery(e.target.value)}
+                                          autoFocus // Added for better UX
+                                        />
+                                        {searchQuery && (
+                                            <button
+                                              onClick={() => setSearchQuery('')}
+                                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                      </div>
+                                    )}
+                      
+                                    {/* Default header content for mobile, hidden when search bar is active */}
+                                    {!showMobileSearchBar && (
+                                      <>
+                                        <div className="flex items-center gap-3">
+                                          <button
+                                            className="md:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-md"
+                                            onClick={() => setSidebarOpen(true)}
+                                          >
+                                            <Menu size={20} />
+                                          </button>
+                                          <div className="flex items-center gap-1 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded-md transition-colors select-none">
+                                            <span className="font-bold text-lg text-gray-800 tracking-tight">
+                                              {activeView === 'all' && (selectedDate ? `筛选: ${selectedDate}` : (searchQuery ? `搜索: ${searchQuery}` : 'EasyFlomo'))}
+                                              {activeView === 'random' && '随机漫步'}
+                                            </span>
+                                          </div>
+                                        </div>
+                      
+                                        {/* PC Search Bar (remains hidden on mobile, visible on desktop) */}
+                                        <div className="flex-1 max-w-xs hidden md:block">
+                                          {activeView === 'all' && !selectedDate && (
+                                            <div className="relative group">
+                                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-flomo-green transition-colors" size={16} />
+                                              <input
+                                                type="text"
+                                                placeholder="搜索笔记..."
+                                                className="w-full bg-gray-100 hover:bg-white focus:bg-white border border-transparent focus:border-flomo-green/30 rounded-full py-1.5 pl-9 pr-10 outline-none transition-all duration-200 placeholder-gray-400 text-sm"
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                              />
+                                              {searchQuery && (
+                                                  <button
+                                                    onClick={() => setSearchQuery('')}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                  >
+                                                      <X size={14} />
+                                                  </button>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </>
+                                    )}
+                      
+                                    {/* Mobile Search/Close Button (always on right of mobile header) */}
+                                    <div className="md:hidden">
+                                      {activeView === 'all' && (
+                                        <button
+                                          onClick={() => setShowMobileSearchBar(!showMobileSearchBar)}
+                                          className="p-2 -mr-2 text-gray-500 hover:bg-gray-100 rounded-md"
+                                        >
+                                          {showMobileSearchBar ? <X size={20} /> : <Search size={20} />}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>                    </header>
           {/* Content Scroll Area */}
           <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-10 scroll-smooth">
             <div className="max-w-3xl mx-auto w-full space-y-6 pt-6">
