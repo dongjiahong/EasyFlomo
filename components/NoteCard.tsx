@@ -105,9 +105,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onDelete, onUpdate }) => {
                     {deleteStep === 1 ? <AlertTriangle size={16} /> : <Trash2 size={16} />}
                 </button>
             )}
-            <button className="text-gray-300 hover:text-gray-600 transition-colors cursor-move">
-                <MoreHorizontal size={18} />
-            </button>
+
         </div>
       </div>
 
