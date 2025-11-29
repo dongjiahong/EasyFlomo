@@ -9,9 +9,10 @@ interface SettingsModalProps {
   settings: AppSettings;
   onSave: (settings: AppSettings) => Promise<void>;
   onClearTrash?: () => Promise<void>;
+  trashCount: number;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings, onSave, onClearTrash }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings, onSave, onClearTrash, trashCount }) => {
   const [activeTab, setActiveTab] = useState<'ai' | 'webdav' | 'data'>('ai');
   const [formData, setFormData] = useState<AppSettings>(settings);
   const [isSaving, setIsSaving] = useState(false);
@@ -272,7 +273,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                   <div className="p-4 bg-red-50 rounded-lg border border-red-100">
                       <div className="flex items-center gap-2 text-red-700 font-bold mb-2">
                           <Trash2 size={18} />
-                          <h3>废纸篓</h3>
+                          <h3>废纸篓 ({trashCount}条)</h3>
                       </div>
                       <p className="text-xs text-red-600 mb-4 leading-relaxed">
                           已删除的笔记会保留 30 天，期间可以同步到云端（标记为删除）。
@@ -280,12 +281,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                       </p>
                       <button 
                         onClick={handleClearTrash}
-                        disabled={trashStatus !== 'idle'}
+                        disabled={trashStatus !== 'idle' || trashCount === 0}
                         className={`
                             w-full py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2
                             ${trashStatus === 'cleared' 
                                 ? 'bg-green-600 text-white' 
                                 : 'bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300'}
+                                ${trashCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}
                         `}
                       >
                           {trashStatus === 'idle' && '立即清空废纸篓'}

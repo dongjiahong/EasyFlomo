@@ -29,6 +29,7 @@ export function useNotes() {
   const [heatmapData, setHeatmapData] = useState<Map<string, number>>(new Map());
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
+  const [trashCount, setTrashCount] = useState(0); // New state for trash count
 
   // 加载数据
   const loadData = useCallback(async () => {
@@ -38,6 +39,8 @@ export function useNotes() {
       
       // Filter out deleted notes (Tombstones)
       const visibleNotes = allNotes.filter(n => !n.isDeleted);
+      const deletedNotes = allNotes.filter(n => n.isDeleted); // Calculate deleted notes
+      setTrashCount(deletedNotes.length); // Set trash count
 
       // 按时间倒序
       visibleNotes.sort((a, b) => b.timestamp - a.timestamp);
@@ -282,6 +285,7 @@ export function useNotes() {
     heatmapData,
     settings,
     isLoading,
+    trashCount, // Export trash count
     addNote,
     updateNoteContent,
     deleteNote,

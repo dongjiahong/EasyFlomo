@@ -217,7 +217,7 @@ const NoteInput: React.FC<NoteInputProps> = ({ onAddNote, onUploadAsset, existin
         
         {/* Suggestion Box (Simplified positioning for now) */}
         {showSuggestions && (
-            <div className="absolute left-4 bottom-14 bg-white border border-gray-200 shadow-lg rounded-lg max-h-40 overflow-y-auto z-20 min-w-[150px]">
+            <div className="absolute left-4 top-full mt-1 bg-white border border-gray-200 shadow-lg rounded-lg max-h-40 overflow-y-auto z-50 min-w-[150px]">
                 {suggestions.map(tag => (
                     <div 
                         key={tag}

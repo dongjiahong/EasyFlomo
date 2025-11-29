@@ -51,7 +51,8 @@ function App() {
     getTodayNotes,
     getRandomNotes,
     generateAIResponse,
-    refresh
+    refresh,
+    trashCount // Extract trashCount
   } = useNotes();
 
   // Handle View & Filter Changes
@@ -94,6 +95,14 @@ function App() {
     }
     // Close sidebar on mobile if clicked
     if (window.innerWidth < 768) setSidebarOpen(false);
+  };
+
+  // Handle Tag Click
+  const handleTagClick = (tag: string) => {
+      setSearchQuery(`#${tag}`);
+      setActiveView('all');
+      setSelectedDate(null);
+      if (window.innerWidth < 768) setSidebarOpen(false);
   };
 
   // AI Actions
@@ -183,6 +192,7 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
           heatmapData={heatmapData}
           selectedDate={selectedDate}
           onHeatmapClick={handleHeatmapClick}
+          onTagClick={handleTagClick}
           isOpen={isSidebarOpen}
           onClose={() => setSidebarOpen(false)}
           onOpenSettings={() => setSettingsOpen(true)}
@@ -327,6 +337,7 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
         settings={settings}
         onSave={updateSettings}
         onClearTrash={clearTrash}
+        trashCount={trashCount}
       />
 
     </div>

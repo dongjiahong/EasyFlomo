@@ -23,6 +23,7 @@ interface SidebarProps {
   heatmapData: Map<string, number>;
   selectedDate: string | null;
   onHeatmapClick: (date: string) => void;
+  onTagClick: (tag: string) => void;
   isOpen: boolean;
   onClose: () => void;
   onOpenSettings: () => void;
@@ -34,7 +35,7 @@ interface SidebarProps {
 }
 
 // Recursive Tag Component
-const TagItem: React.FC<{ node: TagNode; depth?: number }> = ({ node, depth = 0 }) => {
+const TagItem: React.FC<{ node: TagNode; depth?: number; onTagClick: (tag: string) => void }> = ({ node, depth = 0, onTagClick }) => {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const hasChildren = node.children && node.children.length > 0;
 
@@ -46,6 +47,7 @@ const TagItem: React.FC<{ node: TagNode; depth?: number }> = ({ node, depth = 0 
           text-gray-700 hover:bg-gray-100 rounded-md text-sm cursor-pointer group
         `}
         style={{ paddingLeft: `${depth * 12 + 12}px` }}
+        onClick={() => onTagClick(node.fullPath)}
       >
         <div className="flex items-center gap-2 overflow-hidden">
           {hasChildren && (
@@ -69,7 +71,7 @@ const TagItem: React.FC<{ node: TagNode; depth?: number }> = ({ node, depth = 0 
       {isExpanded && hasChildren && (
         <div>
           {node.children.map(child => (
-            <TagItem key={child.id} node={child} depth={depth + 1} />
+            <TagItem key={child.id} node={child} depth={depth + 1} onTagClick={onTagClick} />
           ))}
         </div>
       )}
@@ -83,6 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   heatmapData,
   selectedDate,
   onHeatmapClick,
+  onTagClick,
   isOpen, 
   onClose, 
   onOpenSettings,
@@ -171,7 +174,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* User Profile Header */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">
-                  <img src="/logo.svg" alt="Logo" className="w-8 h-8" />
                   <span className="font-bold text-lg text-gray-800 tracking-tight">EasyFlomo</span>
               </div>
               <div className="flex items-center gap-1">
@@ -258,7 +260,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <div className="text-xs text-gray-400 px-3">暂无标签</div>
                     )}
                     {tags.map(node => (
-                        <TagItem key={node.id} node={node} />
+                        <TagItem key={node.id} node={node} onTagClick={onTagClick} />
                     ))}
                 </div>
             </div>
