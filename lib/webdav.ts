@@ -18,15 +18,17 @@ export class WebDAVClient {
     this.authHeader = 'Basic ' + btoa(`${config.username}:${config.password || ''}`);
   }
 
-  private getUrl(path: string): string {
+  private getUrl(path: string, isDirectory: boolean = false): string {
     // Remove trailing slash from base and leading slash from path to avoid doubles
     const base = this.config.url.replace(/\/$/, '');
     const cleanPath = path.replace(/^\//, '');
-    return `${base}/${cleanPath}`;
+    // 确保目录路径有尾斜杠,避免 301 重定向
+    const finalPath = isDirectory && !cleanPath.endsWith('/') ? cleanPath + '/' : cleanPath;
+    return `${base}/${finalPath}`;
   }
 
-  private async request(method: string, path: string, body?: BodyInit | null, headers: Record<string, string> = {}): Promise<Response> {
-    const url = this.getUrl(path);
+  private async request(method: string, path: string, body?: BodyInit | null, headers: Record<string, string> = {}, isDirectory: boolean = false): Promise<Response> {
+    const url = this.getUrl(path, isDirectory);
     const response = await fetch(url, {
       method,
       headers: {
@@ -39,13 +41,13 @@ export class WebDAVClient {
     if (response.status === 401) {
       throw new Error('WebDAV Authentication Failed');
     }
-    
+
     return response;
   }
 
   async exists(path: string): Promise<boolean> {
     try {
-      const response = await this.request('PROPFIND', path, null, { 'Depth': '0' });
+      const response = await this.request('PROPFIND', path, null, { 'Depth': '0' }, true);
       return response.status >= 200 && response.status < 300;
     } catch (e) {
       return false;
@@ -53,7 +55,7 @@ export class WebDAVClient {
   }
 
   async mkcol(path: string): Promise<void> {
-    const response = await this.request('MKCOL', path);
+    const response = await this.request('MKCOL', path, null, {}, true);
     if (response.status !== 201 && response.status !== 405) { // 405 = already exists
       throw new Error(`Failed to create directory: ${path}`);
     }
@@ -92,7 +94,7 @@ export class WebDAVClient {
 
   // Parse directory listing
   async listFiles(path: string): Promise<WebDAVFile[]> {
-    const response = await this.request('PROPFIND', path, null, { 'Depth': '1' });
+    const response = await this.request('PROPFIND', path, null, { 'Depth': '1' }, true);
     if (!response.ok) return [];
 
     const text = await response.text();
