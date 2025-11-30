@@ -42,7 +42,19 @@ const Heatmap: React.FC<HeatmapProps> = ({ activityData, selectedDate, onDateCli
   }, [activityData]);
 
   return (
-    <div className="w-full mb-6 px-4 flex justify-center">
+    <div className="w-full mb-6">
+      <style>{`
+        .react-activity-calendar {
+          width: 100% !important;
+        }
+        .react-activity-calendar__scroll-container {
+          overflow: visible !important;
+        }
+        .react-activity-calendar svg {
+          width: 100% !important;
+          height: auto !important;
+        }
+      `}</style>
       <ActivityCalendar
         data={data}
         theme={{
@@ -51,10 +63,10 @@ const Heatmap: React.FC<HeatmapProps> = ({ activityData, selectedDate, onDateCli
           dark: ['#f0f0f0', '#9be9a8', '#40c463', '#30a14e', '#216e39'],
         }}
         colorScheme="light"
-        blockSize={18}
+        blockSize={15}
         blockMargin={3}
         blockRadius={3}
-        fontSize={12}
+        fontSize={11}
         hideColorLegend
         hideTotalCount
         hideMonthLabels={false}
@@ -62,8 +74,8 @@ const Heatmap: React.FC<HeatmapProps> = ({ activityData, selectedDate, onDateCli
           React.cloneElement(block, {
             'data-tooltip-id': 'react-tooltip',
             'data-tooltip-content': `${activity.date}: ${activity.count} 笔记`,
-            style: { 
-              ...block.props.style, 
+            style: {
+              ...block.props.style,
               cursor: 'pointer',
               // Make the selected state pop more
               outline: selectedDate === activity.date ? '2px solid #333' : 'none',
@@ -74,16 +86,16 @@ const Heatmap: React.FC<HeatmapProps> = ({ activityData, selectedDate, onDateCli
           })
         )}
       />
-      <Tooltip 
-        id="react-tooltip" 
-        style={{ 
-            backgroundColor: '#333', 
-            color: '#fff', 
-            fontSize: '12px', 
+      <Tooltip
+        id="react-tooltip"
+        style={{
+            backgroundColor: '#333',
+            color: '#fff',
+            fontSize: '12px',
             padding: '6px 10px',
             borderRadius: '6px',
             zIndex: 50
-        }} 
+        }}
       />
     </div>
   );
