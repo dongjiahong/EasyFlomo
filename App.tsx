@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Menu, Search, Filter, Loader2, Dices, X } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import NoteInput from './components/NoteInput';
@@ -7,8 +7,11 @@ import NoteCard from './components/NoteCard';
 import SettingsModal from './components/SettingsModal';
 import AIPanel from './components/AIPanel';
 import TrashPanel from './components/TrashPanel'; // Import TrashPanel
+import FreezeDialog from './components/FreezeDialog'; // Import FreezeDialog
+import CryopodDashboard from './components/CryopodDashboard'; // Import CryopodDashboard
+import Toast, { ToastType } from './components/Toast'; // Import Toast
 import { useNotes } from './hooks/useNotes';
-import { Note } from './types';
+import { Note, FlowSnapshot } from './types';
 
 interface AIPanelState {
   type: 'summary' | 'insight' | null;
@@ -21,10 +24,19 @@ function App() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false); // Trash state
+  const [isFreezeOpen, setIsFreezeOpen] = useState(false); // Freeze state
+  const [freezingNote, setFreezingNote] = useState<Note | null>(null); // Note being frozen
   const [activeView, setActiveView] = useState<'all' | 'random'>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showMobileSearchBar, setShowMobileSearchBar] = useState(false);
+  
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: ToastType; id: number } | null>(null);
+
+  const showToast = (message: string, type: ToastType = 'info') => {
+    setToast({ message, type, id: Date.now() });
+  };
   
   // AI Panel State
   const [aiPanel, setAiPanel] = useState<AIPanelState>({
@@ -46,19 +58,30 @@ function App() {
     settings,
     isLoading, 
     addNote, 
+    addFrozenNote,
+    freezeExistingNote,
     updateNoteContent,
     deleteNote,
-    restoreNote, // New function
-    permanentlyDeleteNote, // New function
-    trashedNotes, // New state
+    restoreNote, 
+    permanentlyDeleteNote,
+    trashedNotes,
     clearTrash,
     uploadAsset,
     updateSettings,
     getTodayNotes,
     getRandomNotes,
     generateAIResponse,
+    generateFlowSnapshotContent,
+    analyzeFlowSnapshot,
+    generateResumeBriefing,
+    unfreezeNote,
     refresh
   } = useNotes();
+
+  // Find the latest active frozen note for the dashboard
+  const activeFrozenNote = useMemo(() => {
+    return notes.find(n => n.isFrozen && !n.isDeleted) || null;
+  }, [notes]);
 
   // Handle View & Filter Changes
   useEffect(() => {
@@ -88,6 +111,41 @@ function App() {
       setDisplayNotes(filtered);
     }
   }, [activeView, selectedDate, searchQuery, notes]);
+
+  const handleSaveFreeze = async (snapshot: FlowSnapshot, aiContent?: string) => {
+    try {
+      if (freezingNote) {
+          // Freeze existing
+          await freezeExistingNote(freezingNote.id, snapshot, aiContent || '');
+          showToast('已追加心流冷冻存档', 'success');
+      } else {
+          // New frozen note
+          await addFrozenNote(snapshot, aiContent);
+          showToast('心流已冷冻', 'success');
+      }
+      setSearchQuery(''); 
+      setSelectedDate(null);
+      setFreezingNote(null);
+    } catch (e) {
+      console.error(e);
+      showToast('冷冻失败', 'error');
+    }
+  };
+
+  const handleOpenFreezeDialog = (note?: Note) => {
+      setFreezingNote(note || null);
+      setIsFreezeOpen(true);
+  };
+
+  const handleThaw = async (id: string) => {
+      try {
+          await unfreezeNote(id);
+          showToast('脑镜像同步完成，欢迎回来', 'success');
+      } catch (e) {
+          console.error(e);
+          showToast('解冻失败', 'error');
+      }
+  };
 
   // Handle Heatmap Click
   const handleHeatmapClick = (date: string) => {
@@ -207,6 +265,7 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
           onOpenDailyReview={handleOpenDailyReview}
           onOpenAIInsight={handleOpenAIInsight}
           onSync={refresh}
+          showToast={showToast}
         />
 
         {/* Right Main Content */}
@@ -298,11 +357,19 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
           <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-10 scroll-smooth">
             <div className="max-w-3xl mx-auto w-full space-y-6 pt-6">
               
+              {/* Dashboard */}
+              <CryopodDashboard 
+                frozenNote={activeFrozenNote}
+                onThaw={handleThaw}
+                onGenerateBriefing={generateResumeBriefing}
+              />
+
               {/* Input */}
               {activeView === 'all' && !selectedDate && !searchQuery && (
                 <NoteInput 
                     onAddNote={addNote} 
                     onUploadAsset={uploadAsset} 
+                    onFreeze={() => handleOpenFreezeDialog()}
                     existingTags={allTagNames}
                 />
               )}
@@ -346,6 +413,7 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
                         note={note} 
                         onDelete={deleteNote} 
                         onUpdate={updateNoteContent}
+                        onFreeze={handleOpenFreezeDialog}
                     />
                   ))
                 )}
@@ -388,6 +456,24 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
         onDeletePermanently={permanentlyDeleteNote}
         onClearTrash={clearTrash}
       />
+
+      <FreezeDialog 
+        isOpen={isFreezeOpen}
+        onClose={() => { setIsFreezeOpen(false); setFreezingNote(null); }}
+        onSave={handleSaveFreeze}
+        onAnalyze={analyzeFlowSnapshot}
+        onOptimize={generateFlowSnapshotContent}
+        referenceContent={freezingNote?.content}
+      />
+
+      {toast && (
+        <Toast 
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
 
     </div>
   );

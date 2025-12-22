@@ -1,14 +1,15 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Hash, Image as ImageIcon, Type, List, ListOrdered, Send, Loader2 } from 'lucide-react';
+import { Hash, Image as ImageIcon, Type, List, ListOrdered, Send, Loader2, Snowflake } from 'lucide-react';
 
 interface NoteInputProps {
   onAddNote: (content: string, assetIds: string[]) => Promise<void>;
   onUploadAsset: (file: File) => Promise<string>;
+  onFreeze?: () => void;
   existingTags?: string[];
 }
 
-const NoteInput: React.FC<NoteInputProps> = ({ onAddNote, onUploadAsset, existingTags = [] }) => {
+const NoteInput: React.FC<NoteInputProps> = ({ onAddNote, onUploadAsset, onFreeze, existingTags = [] }) => {
   const [content, setContent] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,6 +34,13 @@ const NoteInput: React.FC<NoteInputProps> = ({ onAddNote, onUploadAsset, existin
 
   const handleSubmit = async () => {
     if (!content.trim() || isSubmitting) return;
+
+    // Command Check
+    if (content.trim() === '/freeze' && onFreeze) {
+        onFreeze();
+        setContent('');
+        return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -255,6 +263,15 @@ const NoteInput: React.FC<NoteInputProps> = ({ onAddNote, onUploadAsset, existin
           </button>
           <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="有序列表" onClick={() => insertText("\n1. ")}>
             <ListOrdered size={18} />
+          </button>
+          
+          <div className="w-px h-4 bg-gray-200 mx-1"></div>
+          <button 
+            className="p-2 hover:bg-blue-50 text-blue-500 rounded-lg transition-colors" 
+            title="心流冷冻 ( /freeze )" 
+            onClick={() => onFreeze?.()}
+          >
+            <Snowflake size={18} />
           </button>
         </div>
 

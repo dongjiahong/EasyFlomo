@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Note, UserStats, TagNode, AppSettings } from '../types';
+import { Note, UserStats, TagNode, AppSettings, FlowSnapshot } from '../types';
 import { db } from '../lib/db';
 import { syncNotes } from '../lib/sync';
 
@@ -178,6 +178,80 @@ export function useNotes() {
     await loadData();
   };
 
+  const freezeExistingNote = async (id: string, snapshot: FlowSnapshot, aiOptimizedContent: string) => {
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+
+    const newContent = `${note.content}\n\n---\n\n${aiOptimizedContent}`;
+    
+    const updatedNote: Note = {
+      ...note,
+      content: newContent,
+      isFrozen: true,
+      flowSnapshot: snapshot,
+      updatedAt: Date.now()
+    };
+    
+    await db.updateNote(updatedNote);
+    await loadData();
+  };
+
+  const addFrozenNote = async (snapshot: FlowSnapshot, aiOptimizedContent?: string) => {
+    const now = new Date();
+    
+    // Fallback content format if AI is not used or fails
+    const fallbackContent = `❄️ **心流冷冻存档**\n\n### 🧠 思维内存\n${snapshot.mentalRam || '无'}\n\n### ⚡ 逻辑快照\n${snapshot.logicSnapshot || '无'}\n\n### 🎭 当前状态\n${snapshot.state || '无'}\n\n#心流冷冻`;
+
+    const newNote: Note = {
+      id: crypto.randomUUID(),
+      content: aiOptimizedContent || fallbackContent,
+      assetIds: [],
+      timestamp: now.getTime(),
+      createdAt: now.toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
+      updatedAt: now.getTime(),
+      isDeleted: false,
+      isFrozen: true,
+      flowSnapshot: snapshot
+    };
+    
+    await db.addNote(newNote);
+    await loadData();
+  };
+
+  const unfreezeNote = async (id: string) => {
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+    
+    const updatedNote = {
+      ...note,
+      isFrozen: false,
+      updatedAt: Date.now()
+    };
+    
+    await db.updateNote(updatedNote);
+    await loadData();
+  };
+
+  const generateResumeBriefing = async (note: Note): Promise<string> => {
+    if (!note.flowSnapshot) return "欢迎回来，继续你的心流。";
+    
+    const prompt = `
+你是一个“脑镜像同步助手”。用户刚刚从中断中返回，请根据他上次离开时留下的“心流冷冻快照”，生成一句精炼、硬核、且具有“脑镜像同步”感的欢迎语，帮助他瞬间找回状态。
+
+快照内容：
+- 思维内存: ${note.flowSnapshot.mentalRam}
+- 逻辑快照: ${note.flowSnapshot.logicSnapshot}
+- 当时状态: ${note.flowSnapshot.state}
+
+要求：
+1. 极其简练（不超过 60 字）。
+2. 采用类似“同步中... 镜像已就绪”或“你上次卡在 X，现在继续吗？”的语气。
+3. 重点突出“你上次在哪里”和“为什么”。
+4. 不要废话。
+`;
+    return await generateAIResponse(prompt);
+  };
+
   const updateNoteContent = async (id: string, newContent: string) => {
     const note = notes.find(n => n.id === id);
     if (!note) return;
@@ -290,6 +364,60 @@ export function useNotes() {
     }
   };
 
+  const generateFlowSnapshotContent = async (snapshot: FlowSnapshot, context?: string): Promise<string> => {
+    const prompt = `
+你是一个硬核、客观、去情感化的“心流状态记录员”。你的任务是将用户的碎片化输入整理成一份日后能精准还原逻辑的“现场存档”。
+
+${context ? `背景信息（原笔记内容）：\n${context}\n` : ''}
+
+输入内容：
+- 思维内存 (Mental RAM): ${snapshot.mentalRam}
+- 逻辑快照 (Logic Snapshot): ${snapshot.logicSnapshot}
+- 当前状态 (State): ${snapshot.state}
+
+请按照以下要求输出：
+1. 保持客观、冷峻、手术刀般的语调。
+2. 逻辑严密，重点突出。
+3. 输出格式为 Markdown，包含三个固定标题：🧠 思维内存、⚡ 逻辑快照、🎭 状态追踪。
+4. 如果输入太短，请根据语境进行合理的硬核补充，但不要捏造事实。
+5. 结尾加上 #心流冷冻 标签。
+
+输出示例：
+🧠 思维内存
+- 当前卡在 WebDAV 同步冲突处理逻辑。
+- 待验证：ETag 是否在所有服务器上一致。
+
+⚡ 逻辑快照
+- 暂时采用“本地优先”策略，因为用户手动保存动作具有更高的意图权重。
+
+🎭 状态追踪
+- 能量中等，思维略有发散，需断点保护。
+
+#心流冷冻
+`;
+    return await generateAIResponse(prompt);
+  };
+
+  const analyzeFlowSnapshot = async (snapshot: FlowSnapshot, context?: string): Promise<string | null> => {
+    // Logic for deep questioning
+    if (!snapshot.mentalRam || !snapshot.logicSnapshot) return null;
+    
+    // If input is too short (e.g. less than 10 chars), ask for more context
+    if (snapshot.mentalRam.length < 10 || snapshot.logicSnapshot.length < 10) {
+        const prompt = `
+你是一个引导员。用户正在尝试冷冻心流，但输入的内容过于模糊。
+${context ? `背景信息（原笔记内容）：\n${context}\n` : ''}
+思维内存: ${snapshot.mentalRam}
+逻辑快照: ${snapshot.logicSnapshot}
+
+请根据这些模糊的信息（结合背景），提出一个具体的“深度追问”，强迫用户闭环逻辑。只需返回问题本身，不要有其他废话。
+例如：如果你说“代码报错”，我会追问“具体的错误码是什么，以及你怀疑的第一个嫌疑点在哪里？”
+`;
+        return await generateAIResponse(prompt);
+    }
+    return null;
+  };
+
   return {
     notes,
     stats,
@@ -300,6 +428,9 @@ export function useNotes() {
     isLoading,
     trashedNotes,
     addNote,
+    addFrozenNote,
+    freezeExistingNote,
+    unfreezeNote,
     updateNoteContent,
     deleteNote,
     restoreNote,
@@ -310,6 +441,9 @@ export function useNotes() {
     getTodayNotes,
     getRandomNotes,
     generateAIResponse,
+    generateFlowSnapshotContent,
+    analyzeFlowSnapshot,
+    generateResumeBriefing,
     refresh: sync
   };
 }

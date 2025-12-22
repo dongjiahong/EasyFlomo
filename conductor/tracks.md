@@ -1,9 +1,6 @@
-# Project Tracks
-
-This file tracks all major tracks for the project. Each track has its own detailed plan in its respective folder.
+# 项目 Tracks
 
 ---
 
-## [ ] Track: Refine the WebDAV synchronization logic to ensure more robust error handling and conflict resolution.
-*Link: [./conductor/tracks/webdav_sync_20251222/](./conductor/tracks/webdav_sync_20251222/)*
-
+## [x] Track: 现有笔记的心流冷冻 (Freeze Existing Notes)
+*Link: [./conductor/tracks/freeze_existing_notes_20251222/](./conductor/tracks/freeze_existing_notes_20251222/)*

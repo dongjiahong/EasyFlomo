@@ -2,7 +2,7 @@
 import { Note, Asset, AppSettings } from '../types';
 
 const DB_NAME = 'flomo_clone_db';
-const DB_VERSION = 4; // Upgraded for deleted_assets_queue
+const DB_VERSION = 5; // Upgraded for flow cryopod
 
 class FlomoDB {
   private db: IDBDatabase | null = null;
@@ -28,14 +28,24 @@ class FlomoDB {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
+        const transaction = (event.target as IDBOpenDBRequest).transaction!;
         
         // Notes Store
+        let noteStore: IDBObjectStore;
         if (!db.objectStoreNames.contains('notes')) {
-          const noteStore = db.createObjectStore('notes', { keyPath: 'id' });
+          noteStore = db.createObjectStore('notes', { keyPath: 'id' });
           noteStore.createIndex('timestamp', 'timestamp', { unique: false });
+        } else {
+          noteStore = transaction.objectStore('notes');
+        }
+
+        // Add isFrozen index if it doesn't exist
+        if (!noteStore.indexNames.contains('isFrozen')) {
+            noteStore.createIndex('isFrozen', 'isFrozen', { unique: false });
         }
 
         // Assets Store (for Blobs)
+
         if (!db.objectStoreNames.contains('assets')) {
           db.createObjectStore('assets', { keyPath: 'id' });
         }
@@ -132,6 +142,13 @@ class FlomoDB {
   async getAllNotes(): Promise<Note[]> {
     await this.ensureInit();
     return this.tx('notes', 'readonly', (store) => store.getAll());
+  }
+
+  async getFrozenNotes(): Promise<Note[]> {
+    await this.ensureInit();
+    const notes = await this.getAllNotes();
+    // Filter in memory because boolean values are not valid IndexedDB keys in all implementations
+    return notes.filter(n => n.isFrozen === true && !n.isDeleted);
   }
 
   // Clean up items deleted more than 30 days ago

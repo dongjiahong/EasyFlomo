@@ -27,9 +27,32 @@ export class WebDAVClient {
     return `${base}/${finalPath}`;
   }
 
+  private async fetchWithRetry(url: string, options: RequestInit, retries = 3, backoff = 1000): Promise<Response> {
+    try {
+      const response = await fetch(url, options);
+      
+      // Retry on 5xx server errors
+      if (response.status >= 500 && retries > 0) {
+        throw new Error(`Server Error: ${response.status}`);
+      }
+      
+      return response;
+    } catch (error) {
+      if (retries <= 0) {
+        throw error;
+      }
+      
+      // Don't retry on 4xx errors (except maybe 429, but let's keep it simple for now)
+      // If it's a real network error (fetch throws), we retry
+      
+      await new Promise(resolve => setTimeout(resolve, backoff));
+      return this.fetchWithRetry(url, options, retries - 1, backoff * 2);
+    }
+  }
+
   private async request(method: string, path: string, body?: BodyInit | null, headers: Record<string, string> = {}, isDirectory: boolean = false): Promise<Response> {
     const url = this.getUrl(path, isDirectory);
-    const response = await fetch(url, {
+    const response = await this.fetchWithRetry(url, {
       method,
       headers: {
         'Authorization': this.authHeader,

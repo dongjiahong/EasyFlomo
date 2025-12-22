@@ -33,6 +33,7 @@ interface SidebarProps {
   onOpenDailyReview: () => void;
   onOpenAIInsight: () => void;
   onSync: () => Promise<void>;
+  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
 // Recursive Tag Component
@@ -95,7 +96,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onViewChange,
   onOpenDailyReview,
   onOpenAIInsight,
-  onSync
+  onSync,
+  showToast
 }) => {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   
@@ -134,7 +136,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const handleSyncClick = async () => {
     const settings = await db.getSettings();
     if (!settings?.webdav?.url || !settings?.webdav?.username) {
-        alert("请先在设置中配置 WebDAV 信息！");
+        showToast("请先在设置中配置 WebDAV 信息！", 'error');
         onOpenSettings();
         return;
     }
@@ -143,11 +145,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     try {
         await onSync();
         setSyncStatus('success');
+        showToast('同步成功', 'success');
         setTimeout(() => setSyncStatus('idle'), 2000);
     } catch (e: any) {
         console.error(e);
         setSyncStatus('error');
-        alert(`同步失败: ${e.message}`);
+        showToast(`同步失败: ${e.message}`, 'error');
         setTimeout(() => setSyncStatus('idle'), 3000);
     }
   };

@@ -12,6 +12,16 @@ export interface Note {
   updatedAt?: number; // Timestamp for conflict resolution
   isDeleted?: boolean; // Soft delete flag (Tombstone)
   deletedAt?: number; // When it was deleted
+  
+  // Flow Cryopod
+  isFrozen?: boolean;
+  flowSnapshot?: FlowSnapshot;
+}
+
+export interface FlowSnapshot {
+  mentalRam: string; // Current Mental RAM: open questions, active confusion
+  logicSnapshot: string; // Logic Snapshot: "Why" statement for the last decision
+  state: string; // Emotional/Energy State
 }
 
 export interface UserStats {

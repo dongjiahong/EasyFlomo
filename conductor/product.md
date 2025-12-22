@@ -15,7 +15,7 @@ Users need a frictionless way to capture fleeting thoughts and insights without 
 - Casual users wanting a simple, AI-enhanced replacement for a traditional journal.
 
 ## Core Value Proposition
-EasyFlomo offers a distraction-free interface for instant note capture, augmented by AI to help surface connections and insights, all while ensuring data privacy and portability through WebDAV synchronization.
+EasyFlomo offers a distraction-free interface for instant note capture, augmented by AI for context traceability and insight generation, all while ensuring data privacy and portability through WebDAV synchronization.
 
 ## Key Features
 - **Quick Capture:** Minimalist interface for rapid note entry.
@@ -23,4 +23,5 @@ EasyFlomo offers a distraction-free interface for instant note capture, augmente
 - **Activity Visualization:** Heatmaps to track note-taking habits and consistency.
 - **Data Ownership:** Seamless synchronization via WebDAV to keep data under user control.
 - **Review & Recall:** Tools to easily browse and revisit past notes.
+- **Flow Cryopod (CAPT):** A context-aware system to "freeze" mental state during interruptions and "thaw" it back with AI-driven logic recovery.
 

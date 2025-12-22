@@ -18,6 +18,17 @@ function getWeekShardingKey(timestamp: number): string {
   return `${year}-W${String(weekNo).padStart(2, '0')}`;
 }
 
+// Conflict Resolution Strategy: Last Write Wins
+export function resolveConflict(local: Note, remote: Note): Note {
+  const localTime = local.updatedAt || 0;
+  const remoteTime = remote.updatedAt || 0;
+
+  if (remoteTime > localTime) {
+    return remote;
+  }
+  return local;
+}
+
 export async function syncNotes(config: WebDAVConfig, onProgress?: (msg: string) => void) {
   const client = new WebDAVClient(config);
 
@@ -57,7 +68,17 @@ export async function syncNotes(config: WebDAVConfig, onProgress?: (msg: string)
 
   // 4. List Remote Files (Lazy Loading Strategy)
   onProgress?.('获取远程文件列表...');
-  const remoteFiles = await client.listFiles(NOTES_FOLDER);
+  let remoteFiles: any[] = [];
+  try {
+    remoteFiles = await client.listFiles(NOTES_FOLDER);
+  } catch (e) {
+    console.error('Failed to list remote files:', e);
+    // If we can't list files, we probably can't do much. 
+    // Check if it's an auth error to rethrow, otherwise maybe proceed with local only? 
+    // For now, let's rethrow as it's a critical step for "Sync"
+    throw e;
+  }
+  
   // Sort descending: Process newest weeks first for "Lazy Load" effect in UI
   remoteFiles.sort((a, b) => b.name.localeCompare(a.name));
 
@@ -87,8 +108,12 @@ export async function syncNotes(config: WebDAVConfig, onProgress?: (msg: string)
       try {
         const content = await client.get(filePath);
         remoteNotes = JSON.parse(content);
-      } catch (e) {
-        console.error(`Error fetching ${fileName}`, e);
+      } catch (e: any) {
+        console.error(`Error fetching ${fileName}:`, e);
+        if (e.message === 'WebDAV Authentication Failed') {
+            throw e; // Stop sync on auth failure
+        }
+        // Continue with empty remoteNotes if fetch fails (treat as offline/unavailable)
       }
     }
 
@@ -107,18 +132,14 @@ export async function syncNotes(config: WebDAVConfig, onProgress?: (msg: string)
         mergedMap.set(localNote.id, localNote);
         hasChanges = true;
       } else {
-        // Conflict resolution: Last Write Wins based on updatedAt
-        const localTime = localNote.updatedAt || 0;
-        const remoteTime = remoteNote.updatedAt || 0;
-
-        if (localTime > remoteTime) {
-          mergedMap.set(localNote.id, localNote);
-          hasChanges = true;
-        } else if (remoteTime > localTime) {
-          // Remote is newer, update local DB later
-          mergedMap.set(localNote.id, remoteNote);
+        // Conflict resolution
+        const winner = resolveConflict(localNote, remoteNote);
+        mergedMap.set(localNote.id, winner);
+        
+        // If local won (and different from remote), we need to upload
+        if (winner === localNote && localNote.updatedAt !== remoteNote.updatedAt) {
+             hasChanges = true;
         }
-        // Equal: do nothing
       }
     }
 
