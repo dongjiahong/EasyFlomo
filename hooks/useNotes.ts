@@ -327,7 +327,7 @@ export function useNotes() {
 
     try {
       if (settings.ai.provider === 'gemini') {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.ai.apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${settings.ai.apiKey}`;
         
         // Convert chat context to Gemini format
         // Gemini role 'assistant' is 'model'

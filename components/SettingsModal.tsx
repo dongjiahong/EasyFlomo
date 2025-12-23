@@ -27,10 +27,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
     setIsSaving(true);
     try {
       // Ensure defaults for Gemini if selected
-      let finalSettings = { ...formData };
       if (finalSettings.ai.provider === 'gemini') {
-        finalSettings.ai.url = 'https://generativelanguage.googleapis.com/v1beta'; 
-        finalSettings.ai.model = 'gemini-2.5-flash'; 
+        finalSettings.ai.model = 'gemini-3-flash-preview';
       }
       
       await onSave(finalSettings);
@@ -122,15 +120,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                {/* Gemini Mode: Just API Key */}
                {isGemini && (
                  <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Gemini API Key</label>
-                  <input 
-                    type="password" 
-                    className="w-full text-sm border border-gray-300 rounded-lg p-2.5 outline-none focus:border-flomo-green"
-                    value={formData.ai.apiKey}
-                    onChange={(e) => handleAiChange('apiKey', e.target.value)}
-                    placeholder="AIzaSy..."
-                  />
-                  <p className="text-[10px] text-gray-400 mt-1">默认使用 gemini-2.5-flash 模型</p>
+                   <label className="block text-xs font-bold text-gray-700 mb-1.5">Gemini API Key</label>
+                   <input
+                     type="password"
+                     value={formData.ai.apiKey || ''}
+                     onChange={(e) => handleAiChange('apiKey', e.target.value)}
+                     className="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                     placeholder="AIzaSy..."
+                   />
+                   <p className="text-[10px] text-gray-400 mt-1">默认使用 gemini-3-flash 模型</p>
                  </div>
                )}
 
