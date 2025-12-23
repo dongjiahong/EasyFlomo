@@ -322,24 +322,42 @@ export function useNotes() {
     return shuffled.slice(0, count);
   };
 
-  const generateAIResponse = async (prompt: string): Promise<string> => {
+  const generateAIResponse = async (prompt: string, chatContext?: {role: string, content: string}[]): Promise<string> => {
     if (!settings.ai.apiKey) return "请先在设置中配置 API Key。";
 
     try {
       if (settings.ai.provider === 'gemini') {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${settings.ai.apiKey}`;
+        
+        // Convert chat context to Gemini format
+        // Gemini role 'assistant' is 'model'
+        const contents = chatContext?.map(m => ({
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: m.content }]
+        })) || [];
+        
+        contents.push({
+            role: 'user',
+            parts: [{ text: prompt }]
+        });
+
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-          })
+          body: JSON.stringify({ contents })
         });
         const data = await response.json();
         if (data.error) throw new Error(data.error.message || data.error.status);
         return data.candidates?.[0]?.content?.parts?.[0]?.text || "Gemini 没有返回内容";
       } else {
         const url = `${settings.ai.url.replace(/\/$/, '')}/chat/completions`;
+        
+        const messages = [
+            { role: "system", content: "你是一个善于思考和总结的助手。" },
+            ...(chatContext || []),
+            { role: "user", content: prompt }
+        ];
+
         const response = await fetch(url, {
           method: 'POST',
           headers: {
@@ -348,10 +366,7 @@ export function useNotes() {
           },
           body: JSON.stringify({
             model: settings.ai.model || 'gpt-4o',
-            messages: [
-              { role: "system", content: "你是一个善于思考和总结的助手。" },
-              { role: "user", content: prompt }
-            ]
+            messages: messages
           })
         });
         const data = await response.json();

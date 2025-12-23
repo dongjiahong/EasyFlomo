@@ -9,6 +9,7 @@ import AIPanel from './components/AIPanel';
 import TrashPanel from './components/TrashPanel'; // Import TrashPanel
 import FreezeDialog from './components/FreezeDialog'; // Import FreezeDialog
 import CryopodDashboard from './components/CryopodDashboard'; // Import CryopodDashboard
+import AIChatSidebar from './components/AIChatSidebar'; // Import AIChatSidebar
 import Toast, { ToastType } from './components/Toast'; // Import Toast
 import { useNotes } from './hooks/useNotes';
 import { Note, FlowSnapshot } from './types';
@@ -25,6 +26,8 @@ function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false); // Trash state
   const [isFreezeOpen, setIsFreezeOpen] = useState(false); // Freeze state
+  const [isChatOpen, setIsChatOpen] = useState(false); // Chat state
+  const [activeChatNoteId, setActiveChatNoteId] = useState<string | null>(null); // Active chat note id
   const [freezingNote, setFreezingNote] = useState<Note | null>(null); // Note being frozen
   const [activeView, setActiveView] = useState<'all' | 'random'>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -78,10 +81,15 @@ function App() {
     refresh
   } = useNotes();
 
-  // Find the latest active frozen note for the dashboard
-  const activeFrozenNote = useMemo(() => {
-    return notes.find(n => n.isFrozen && !n.isDeleted) || null;
+  // Find all active frozen notes for the dashboard
+  const activeFrozenNotes = useMemo(() => {
+    return notes.filter(n => n.isFrozen && !n.isDeleted);
   }, [notes]);
+
+  // Find active chat note
+  const activeChatNote = useMemo(() => {
+    return notes.find(n => n.id === activeChatNoteId) || null;
+  }, [notes, activeChatNoteId]);
 
   // Handle View & Filter Changes
   useEffect(() => {
@@ -145,6 +153,21 @@ function App() {
           console.error(e);
           showToast('解冻失败', 'error');
       }
+  };
+
+  const handleOpenAIChat = (note: Note) => {
+      setActiveChatNoteId(note.id);
+      setIsChatOpen(true);
+  };
+
+  const handleSaveChatToNote = async (content: string) => {
+      if (!activeChatNoteId) return;
+      const note = notes.find(n => n.id === activeChatNoteId);
+      if (!note) return;
+
+      const newContent = `${note.content}\n\n> **AI 洞察与对话总结**\n> ${content}`;
+      await updateNoteContent(activeChatNoteId, newContent);
+      showToast('对话总结已保存至笔记', 'success');
   };
 
   // Handle Heatmap Click
@@ -359,9 +382,8 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
               
               {/* Dashboard */}
               <CryopodDashboard 
-                frozenNote={activeFrozenNote}
+                frozenNotes={activeFrozenNotes}
                 onThaw={handleThaw}
-                onGenerateBriefing={generateResumeBriefing}
               />
 
               {/* Input */}
@@ -414,6 +436,8 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
                         onDelete={deleteNote} 
                         onUpdate={updateNoteContent}
                         onFreeze={handleOpenFreezeDialog}
+                        onThaw={handleThaw}
+                        onAIChat={handleOpenAIChat}
                     />
                   ))
                 )}
@@ -436,6 +460,14 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
             isLoading={aiPanel.loading}
             onClose={() => setAiPanel(prev => ({ ...prev, isOpen: false }))}
             onRefresh={aiPanel.type === 'summary' ? handleOpenDailyReview : handleOpenAIInsight}
+          />
+
+          <AIChatSidebar 
+            isOpen={isChatOpen}
+            note={activeChatNote}
+            onClose={() => { setIsChatOpen(false); setActiveChatNoteId(null); }}
+            onSaveToNote={handleSaveChatToNote}
+            generateAIResponse={generateAIResponse}
           />
           
         </main>

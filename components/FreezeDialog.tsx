@@ -166,12 +166,12 @@ const FreezeDialog: React.FC<FreezeDialogProps> = ({
                 <div>
                     <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
                         <Activity size={16} className="text-green-500" />
-                        当前状态 (State)
+                        下一步计划 (Next Step Plan)
                     </label>
                     <input 
                         type="text"
                         className="w-full text-sm border border-gray-300 rounded-lg p-3 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                        placeholder="例如：有点沮丧，需要休息..."
+                        placeholder="例如：先休息一下，然后去查阅 API 文档..."
                         value={formData.state}
                         onChange={e => setFormData(prev => ({...prev, state: e.target.value}))}
                     />
