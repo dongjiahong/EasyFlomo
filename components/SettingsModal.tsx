@@ -27,6 +27,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
     setIsSaving(true);
     try {
       // Ensure defaults for Gemini if selected
+      const finalSettings = { ...formData };
       if (finalSettings.ai.provider === 'gemini') {
         finalSettings.ai.model = 'gemini-3-flash-preview';
       }

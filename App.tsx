@@ -60,6 +60,7 @@ function App() {
     heatmapData,
     settings,
     isLoading, 
+    syncStatus, // Get sync status
     addNote, 
     addFrozenNote,
     freezeExistingNote,
@@ -79,7 +80,9 @@ function App() {
     generateResumeBriefing,
     unfreezeNote,
     refresh
-  } = useNotes();
+  } = useNotes({
+    onToast: (msg, type) => showToast(msg, type)
+  });
 
   // Find all active frozen notes for the dashboard
   const activeFrozenNotes = useMemo(() => {
@@ -288,6 +291,7 @@ ${randomNotes.map(n => `- ${n.content}`).join('\n')}
           onOpenDailyReview={handleOpenDailyReview}
           onOpenAIInsight={handleOpenAIInsight}
           onSync={refresh}
+          syncStatus={syncStatus} // Pass sync status
           showToast={showToast}
         />
 

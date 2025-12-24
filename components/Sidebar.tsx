@@ -33,6 +33,7 @@ interface SidebarProps {
   onOpenDailyReview: () => void;
   onOpenAIInsight: () => void;
   onSync: () => Promise<void>;
+  syncStatus: 'idle' | 'loading' | 'success' | 'error';
   showToast: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
@@ -81,15 +82,15 @@ const TagItem: React.FC<{ node: TagNode; depth?: number; onTagClick: (tag: strin
   );
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ 
-  stats, 
-  tags, 
+const Sidebar: React.FC<SidebarProps> = ({
+  stats,
+  tags,
   heatmapData,
   selectedDate,
   onHeatmapClick,
   onTagClick,
-  isOpen, 
-  onClose, 
+  isOpen,
+  onClose,
   onOpenSettings,
   onOpenTrash,
   activeView,
@@ -97,28 +98,27 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenDailyReview,
   onOpenAIInsight,
   onSync,
+  syncStatus,
   showToast
 }) => {
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  
-  const NavButton = ({ 
-    isActive, 
+  const NavButton = ({
+    isActive,
     onClick,
-    icon: Icon, 
-    label 
-  }: { 
+    icon: Icon,
+    label
+  }: {
     isActive?: boolean;
-    onClick: () => void; 
-    icon: React.ElementType; 
-    label: string 
+    onClick: () => void;
+    icon: React.ElementType;
+    label: string
   }) => {
     return (
-      <button 
+      <button
         onClick={onClick}
         className={`
           flex items-center gap-3 px-3 py-2 rounded-md font-medium w-full transition-all duration-200
-          ${isActive 
-            ? 'bg-flomo-green text-white shadow-sm shadow-emerald-200' 
+          ${isActive
+            ? 'bg-flomo-green text-white shadow-sm shadow-emerald-200'
             : 'text-gray-600 hover:bg-gray-100'}
         `}
       >
@@ -140,21 +140,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         onOpenSettings();
         return;
     }
-
-    setSyncStatus('loading');
+    
+    // Now just call onSync, toasts are handled by useNotes via App's callback
     try {
         await onSync();
-        setSyncStatus('success');
-        showToast('同步成功', 'success');
-        setTimeout(() => setSyncStatus('idle'), 2000);
-    } catch (e: any) {
-        console.error(e);
-        setSyncStatus('error');
-        showToast(`同步失败: ${e.message}`, 'error');
-        setTimeout(() => setSyncStatus('idle'), 3000);
+    } catch (e) {
+        // Errors are already handled in useNotes
     }
   };
-
   return (
     <>
       {/* Mobile Overlay */}

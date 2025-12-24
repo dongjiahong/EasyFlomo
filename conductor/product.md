@@ -22,7 +22,7 @@ EasyFlomo offers a distraction-free interface for instant note capture, augmente
 - **AI Integration:** Automated tagging, summarization, and insight generation using Gemini.
 - **Interactive AI Chat:** Deep-dive discussions on individual notes with AI-generated insights, Markdown support, and flexible archiving (summary or full transcript).
 - **Activity Visualization:** Heatmaps to track note-taking habits and consistency.
-- **Data Ownership:** Seamless synchronization via WebDAV to keep data under user control.
+- **Data Ownership:** Seamless, automatic background synchronization via WebDAV to keep data under user control and up-to-date.
 - **Review & Recall:** Tools to easily browse and revisit past notes.
 - **Flow Cryopod (CAPT):** A context-aware system to "freeze" mental state during interruptions and "thaw" it back with AI-driven logic recovery.
 

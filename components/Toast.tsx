@@ -33,7 +33,7 @@ const Toast: React.FC<ToastProps> = ({ message, type = 'info', duration = 3000, 
   }[type];
 
   return (
-    <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-md animate-in fade-in slide-in-from-bottom-5 ${bgColor}`}>
+    <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-md animate-in fade-in slide-in-from-top-5 ${bgColor}`}>
       <Icon size={18} />
       <span className="text-sm font-medium">{message}</span>
       <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-full transition-colors">

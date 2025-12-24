@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   }
 };
 
-export function useNotes() {
+export function useNotes(options?: { onToast?: (msg: string, type: 'success' | 'error' | 'info') => void }) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [stats, setStats] = useState<UserStats>({ noteCount: 0, tagCount: 0, dayCount: 0 });
   const [tags, setTags] = useState<TagNode[]>([]);
@@ -30,6 +30,9 @@ export function useNotes() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const [trashedNotes, setTrashedNotes] = useState<Note[]>([]); // Store actual trashed notes
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  // ... (calculateStatsAndTags remains same)
 
   // 加载数据
   const loadData = useCallback(async () => {
@@ -176,6 +179,7 @@ export function useNotes() {
     
     await db.addNote(newNote);
     await loadData();
+    if (settings.webdav.url && settings.webdav.username) sync(true);
   };
 
   const freezeExistingNote = async (id: string, snapshot: FlowSnapshot, aiOptimizedContent: string) => {
@@ -194,6 +198,7 @@ export function useNotes() {
     
     await db.updateNote(updatedNote);
     await loadData();
+    if (settings.webdav.url && settings.webdav.username) sync(true);
   };
 
   const addFrozenNote = async (snapshot: FlowSnapshot, aiOptimizedContent?: string) => {
@@ -216,6 +221,7 @@ export function useNotes() {
     
     await db.addNote(newNote);
     await loadData();
+    if (settings.webdav.url && settings.webdav.username) sync(true);
   };
 
   const unfreezeNote = async (id: string) => {
@@ -230,6 +236,7 @@ export function useNotes() {
     
     await db.updateNote(updatedNote);
     await loadData();
+    if (settings.webdav.url && settings.webdav.username) sync(true);
   };
 
   const generateResumeBriefing = async (note: Note): Promise<string> => {
@@ -264,6 +271,7 @@ export function useNotes() {
     
     await db.updateNote(updatedNote);
     await loadData();
+    if (settings.webdav.url && settings.webdav.username) sync(true);
   };
 
   const deleteNote = async (id: string) => {
@@ -295,12 +303,26 @@ export function useNotes() {
     setSettings(newSettings);
   };
 
-  const sync = async () => {
-    await syncNotes(settings.webdav, (msg) => {
-        // We could expose this state if we want a progress bar
-        console.log('[Sync Progress]', msg);
-    });
-    await loadData();
+  const sync = async (isAuto = false) => {
+    if (syncStatus === 'loading') return;
+    
+    setSyncStatus('loading');
+    if (!isAuto) options?.onToast?.('开始同步...', 'info');
+
+    try {
+      await syncNotes(settings.webdav, (msg) => {
+          console.log('[Sync Progress]', msg);
+      });
+      await loadData();
+      setSyncStatus('success');
+      if (!isAuto) options?.onToast?.('同步成功', 'success');
+      setTimeout(() => setSyncStatus('idle'), 2000);
+    } catch (e: any) {
+      console.error('[Sync Error]', e);
+      setSyncStatus('error');
+      options?.onToast?.(`同步失败: ${e.message}`, 'error');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
   };
 
   // --- Helpers for Views ---
@@ -442,6 +464,7 @@ ${context ? `背景信息（原笔记内容）：\n${context}\n` : ''}
     settings,
     isLoading,
     trashedNotes,
+    syncStatus, // New
     addNote,
     addFrozenNote,
     freezeExistingNote,
