@@ -19,7 +19,7 @@ EasyFlomo offers a distraction-free interface for instant note capture, augmente
 
 ## Key Features
 - **Quick Capture:** Minimalist interface for rapid note entry.
-- **AI Integration:** Automated tagging, summarization, and insight generation using Gemini.
+- **AI Integration:** Automated tagging, summarization, and insight generation using Gemini or OpenAI compatible services.
 - **Interactive AI Chat:** Deep-dive discussions on individual notes with AI-generated insights, Markdown support, and flexible archiving (summary or full transcript).
 - **Activity Visualization:** Heatmaps to track note-taking habits and consistency.
 - **Data Ownership:** Seamless, automatic background synchronization via WebDAV to keep data under user control and up-to-date.

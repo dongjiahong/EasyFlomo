@@ -16,5 +16,7 @@
 - **Synchronization:** WebDAV (for cross-device sync and user ownership)
 
 ## AI & Intelligence
-- **AI Model:** Gemini API (for tagging, summaries, and insights)
+- **AI Model:** Google Gemini & OpenAI (Compatible) API
+  - Supports custom model selection (e.g., gemini-1.5-pro, gpt-4o)
+  - Separate configuration for provider-specific API keys and endpoints
 

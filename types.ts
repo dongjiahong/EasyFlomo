@@ -55,9 +55,15 @@ export interface Asset {
 
 export interface AIConfig {
   provider: 'gemini' | 'openai';
-  url: string;
-  apiKey: string;
-  model: string;
+  openai: {
+    url: string;
+    apiKey: string;
+    model: string;
+  };
+  gemini: {
+    apiKey: string;
+    model: string;
+  };
   dailyPrompt?: string; // Custom prompt for daily review
   insightPrompt?: string; // Custom prompt for insights
 }

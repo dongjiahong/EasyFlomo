@@ -26,13 +26,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Ensure defaults for Gemini if selected
-      const finalSettings = { ...formData };
-      if (finalSettings.ai.provider === 'gemini') {
-        finalSettings.ai.model = 'gemini-3-flash-preview';
-      }
-      
-      await onSave(finalSettings);
+      await onSave(formData);
       onClose();
     } catch (e) {
       console.error(e);
@@ -42,7 +36,34 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
     }
   };
 
-  const handleAiChange = (field: keyof AIConfig, value: string) => {
+  const handleProviderChange = (provider: 'gemini' | 'openai') => {
+    setFormData(prev => ({
+      ...prev,
+      ai: { ...prev.ai, provider }
+    }));
+  };
+
+  const handleOpenAIChange = (field: keyof AIConfig['openai'], value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      ai: { 
+        ...prev.ai, 
+        openai: { ...prev.ai.openai, [field]: value }
+      }
+    }));
+  };
+
+  const handleGeminiChange = (field: keyof AIConfig['gemini'], value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      ai: { 
+        ...prev.ai, 
+        gemini: { ...prev.ai.gemini, [field]: value }
+      }
+    }));
+  };
+
+  const handlePromptChange = (field: 'dailyPrompt' | 'insightPrompt', value: string) => {
     setFormData(prev => ({
       ...prev,
       ai: { ...prev.ai, [field]: value }
@@ -111,29 +132,43 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                 <select 
                   className="w-full text-sm border border-gray-300 rounded-lg p-2.5 outline-none focus:border-flomo-green"
                   value={formData.ai.provider}
-                  onChange={(e) => handleAiChange('provider', e.target.value as 'gemini' | 'openai')}
+                  onChange={(e) => handleProviderChange(e.target.value as 'gemini' | 'openai')}
                 >
                   <option value="gemini">Google Gemini</option>
                   <option value="openai">OpenAI (或兼容接口)</option>
                 </select>
                </div>
 
-               {/* Gemini Mode: Just API Key */}
+               {/* Gemini Mode */}
                {isGemini && (
-                 <div>
-                   <label className="block text-xs font-bold text-gray-700 mb-1.5">Gemini API Key</label>
-                   <input
-                     type="password"
-                     value={formData.ai.apiKey || ''}
-                     onChange={(e) => handleAiChange('apiKey', e.target.value)}
-                     className="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                     placeholder="AIzaSy..."
-                   />
-                   <p className="text-[10px] text-gray-400 mt-1">默认使用 gemini-3-flash 模型</p>
+                 <div className="space-y-4">
+                   <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5" htmlFor="gemini-key">Gemini API Key</label>
+                    <input
+                      id="gemini-key"
+                      type="password"
+                      value={formData.ai.gemini.apiKey || ''}
+                      onChange={(e) => handleGeminiChange('apiKey', e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="AIzaSy..."
+                    />
+                   </div>
+                   <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5" htmlFor="gemini-model">Gemini Model</label>
+                    <input
+                      id="gemini-model"
+                      type="text"
+                      value={formData.ai.gemini.model || ''}
+                      onChange={(e) => handleGeminiChange('model', e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="gemini-3-flash-preview"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">例如: gemini-1.5-flash, gemini-1.5-pro</p>
+                   </div>
                  </div>
                )}
 
-               {/* OpenAI Mode: Full Config */}
+               {/* OpenAI Mode */}
                {!isGemini && (
                  <>
                    <div>
@@ -141,8 +176,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                     <input 
                       type="text" 
                       className="w-full text-sm border border-gray-300 rounded-lg p-2.5 outline-none focus:border-flomo-green"
-                      value={formData.ai.url}
-                      onChange={(e) => handleAiChange('url', e.target.value)}
+                      value={formData.ai.openai.url || ''}
+                      onChange={(e) => handleOpenAIChange('url', e.target.value)}
                       placeholder="https://api.openai.com/v1"
                     />
                    </div>
@@ -152,8 +187,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                     <input 
                       type="text" 
                       className="w-full text-sm border border-gray-300 rounded-lg p-2.5 outline-none focus:border-flomo-green"
-                      value={formData.ai.model}
-                      onChange={(e) => handleAiChange('model', e.target.value)}
+                      value={formData.ai.openai.model || ''}
+                      onChange={(e) => handleOpenAIChange('model', e.target.value)}
                       placeholder="gpt-4o"
                     />
                    </div>
@@ -163,8 +198,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                     <input 
                       type="password" 
                       className="w-full text-sm border border-gray-300 rounded-lg p-2.5 outline-none focus:border-flomo-green"
-                      value={formData.ai.apiKey}
-                      onChange={(e) => handleAiChange('apiKey', e.target.value)}
+                      value={formData.ai.openai.apiKey || ''}
+                      onChange={(e) => handleOpenAIChange('apiKey', e.target.value)}
                       placeholder="sk-..."
                     />
                    </div>
@@ -179,7 +214,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                     <textarea 
                       className="w-full text-xs border border-gray-300 rounded-lg p-2 outline-none focus:border-flomo-green min-h-[60px]"
                       value={formData.ai.dailyPrompt || ''}
-                      onChange={(e) => handleAiChange('dailyPrompt', e.target.value)}
+                      onChange={(e) => handlePromptChange('dailyPrompt', e.target.value)}
                       placeholder="自定义每日总结的 Prompt..."
                     />
                   </div>
@@ -189,7 +224,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
                     <textarea 
                       className="w-full text-xs border border-gray-300 rounded-lg p-2 outline-none focus:border-flomo-green min-h-[60px]"
                       value={formData.ai.insightPrompt || ''}
-                      onChange={(e) => handleAiChange('insightPrompt', e.target.value)}
+                      onChange={(e) => handlePromptChange('insightPrompt', e.target.value)}
                       placeholder="自定义随机洞察的 Prompt..."
                     />
                   </div>

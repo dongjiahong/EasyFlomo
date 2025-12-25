@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Note, UserStats, TagNode, AppSettings, FlowSnapshot } from '../types';
 import { db } from '../lib/db';
@@ -8,9 +7,15 @@ const DEFAULT_SETTINGS: AppSettings = {
   id: 'user_settings',
   ai: {
     provider: 'openai',
-    url: 'https://api.openai.com/v1',
-    apiKey: '',
-    model: 'gpt-4o',
+    openai: {
+      url: 'https://api.openai.com/v1',
+      apiKey: '',
+      model: 'gpt-4o',
+    },
+    gemini: {
+      apiKey: '',
+      model: 'gemini-3-flash-preview',
+    },
     dailyPrompt: '请阅读我今天记录的以下笔记，并为我生成一份每日总结。\n总结今天的主要想法、活动或情绪，并提出任何值得进一步思考的点。\n',
     insightPrompt: '随机抽取了我最近的 10 条笔记，请阅读并帮我进行回顾。\n请根据这些内容，给出一个简短的洞察、总结，或者发现它们之间潜在的联系。\n风格保持轻松、启发性。'
   },
@@ -31,53 +36,6 @@ export function useNotes(options?: { onToast?: (msg: string, type: 'success' | '
   const [isLoading, setIsLoading] = useState(true);
   const [trashedNotes, setTrashedNotes] = useState<Note[]>([]); // Store actual trashed notes
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-
-  // ... (calculateStatsAndTags remains same)
-
-  // 加载数据
-  const loadData = useCallback(async () => {
-    try {
-      // Load Notes
-      const allNotes = await db.getAllNotes();
-      
-      // Filter out deleted notes (Tombstones)
-      const visibleNotes = allNotes.filter(n => !n.isDeleted);
-      const deletedNotes = allNotes.filter(n => n.isDeleted);
-      
-      // Sort trashed notes by deletedAt (most recent first) or timestamp
-      deletedNotes.sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
-      setTrashedNotes(deletedNotes);
-
-      // 按时间倒序
-      visibleNotes.sort((a, b) => b.timestamp - a.timestamp);
-      
-      setNotes(visibleNotes);
-      calculateStatsAndTags(visibleNotes);
-
-      // Load Settings
-      const savedSettings = await db.getSettings();
-      if (savedSettings) {
-        setSettings({
-            ...DEFAULT_SETTINGS,
-            ...savedSettings,
-            ai: { ...DEFAULT_SETTINGS.ai, ...savedSettings.ai } // Ensure new fields exist
-        });
-      }
-    } catch (error) {
-      console.error('[useNotes] Failed to load data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // 初始化 DB 和清理垃圾
-  useEffect(() => {
-    db.init().then(async () => {
-        // Auto-cleanup old deleted notes on startup
-        await db.cleanupTrash();
-        await loadData();
-    });
-  }, [loadData]);
 
   // 计算统计信息、热力图数据和提取分级标签
   const calculateStatsAndTags = (currentNotes: Note[]) => {
@@ -165,6 +123,60 @@ export function useNotes(options?: { onToast?: (msg: string, type: 'success' | '
     setTags(rootNodes);
   };
 
+  // 加载数据
+  const loadData = useCallback(async () => {
+    try {
+      // Load Notes
+      const allNotes = await db.getAllNotes();
+      
+      // Filter out deleted notes (Tombstones)
+      const visibleNotes = allNotes.filter(n => !n.isDeleted);
+      const deletedNotes = allNotes.filter(n => n.isDeleted);
+      
+      // Sort trashed notes by deletedAt (most recent first) or timestamp
+      deletedNotes.sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+      setTrashedNotes(deletedNotes);
+
+      // 按时间倒序
+      visibleNotes.sort((a, b) => b.timestamp - a.timestamp);
+      
+      setNotes(visibleNotes);
+      calculateStatsAndTags(visibleNotes);
+
+      // Load Settings
+      const savedSettings = await db.getSettings();
+      if (savedSettings) {
+        // Deep merge AI settings
+        const mergedAI = { ...DEFAULT_SETTINGS.ai, ...savedSettings.ai };
+        // If savedSettings.ai exists, handle nested objects
+        if (savedSettings.ai) {
+           mergedAI.openai = { ...DEFAULT_SETTINGS.ai.openai, ...(savedSettings.ai as any).openai };
+           mergedAI.gemini = { ...DEFAULT_SETTINGS.ai.gemini, ...(savedSettings.ai as any).gemini };
+        }
+
+        setSettings({
+            ...DEFAULT_SETTINGS,
+            ...savedSettings,
+            ai: mergedAI
+        });
+      }
+    } catch (error) {
+      console.error('[useNotes] Failed to load data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 初始化 DB 和清理垃圾
+  useEffect(() => {
+    db.init().then(async () => {
+        // Auto-cleanup old deleted notes on startup
+        await db.cleanupTrash();
+        await loadData();
+    });
+  }, [loadData]);
+
+
   const addNote = async (content: string, assetIds: string[] = []) => {
     const now = new Date();
     const newNote: Note = {
@@ -172,7 +184,7 @@ export function useNotes(options?: { onToast?: (msg: string, type: 'success' | '
       content,
       assetIds,
       timestamp: now.getTime(),
-      createdAt: now.toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
+      createdAt: now.toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-') ,
       updatedAt: now.getTime(),
       isDeleted: false
     };
@@ -212,7 +224,7 @@ export function useNotes(options?: { onToast?: (msg: string, type: 'success' | '
       content: aiOptimizedContent || fallbackContent,
       assetIds: [],
       timestamp: now.getTime(),
-      createdAt: now.toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
+      createdAt: now.toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-') ,
       updatedAt: now.getTime(),
       isDeleted: false,
       isFrozen: true,
@@ -237,26 +249,6 @@ export function useNotes(options?: { onToast?: (msg: string, type: 'success' | '
     await db.updateNote(updatedNote);
     await loadData();
     if (settings.webdav.url && settings.webdav.username) sync(true);
-  };
-
-  const generateResumeBriefing = async (note: Note): Promise<string> => {
-    if (!note.flowSnapshot) return "欢迎回来，继续你的心流。";
-    
-    const prompt = `
-你是一个“脑镜像同步助手”。用户刚刚从中断中返回，请根据他上次离开时留下的“心流冷冻快照”，生成一句精炼、硬核、且具有“脑镜像同步”感的欢迎语，帮助他瞬间找回状态。
-
-快照内容：
-- 思维内存: ${note.flowSnapshot.mentalRam}
-- 逻辑快照: ${note.flowSnapshot.logicSnapshot}
-- 当时状态: ${note.flowSnapshot.state}
-
-要求：
-1. 极其简练（不超过 60 字）。
-2. 采用类似“同步中... 镜像已就绪”或“你上次卡在 X，现在继续吗？”的语气。
-3. 重点突出“你上次在哪里”和“为什么”。
-4. 不要废话。
-`;
-    return await generateAIResponse(prompt);
   };
 
   const updateNoteContent = async (id: string, newContent: string) => {
@@ -345,11 +337,14 @@ export function useNotes(options?: { onToast?: (msg: string, type: 'success' | '
   };
 
   const generateAIResponse = async (prompt: string, chatContext?: {role: string, content: string}[]): Promise<string> => {
-    if (!settings.ai.apiKey) return "请先在设置中配置 API Key。";
+    // Check key based on provider
+    const apiKey = settings.ai.provider === 'gemini' ? settings.ai.gemini.apiKey : settings.ai.openai.apiKey;
+    if (!apiKey) return "请先在设置中配置 API Key。\n";
 
     try {
       if (settings.ai.provider === 'gemini') {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${settings.ai.apiKey}`;
+        const model = settings.ai.gemini.model || 'gemini-3-flash-preview';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         
         // Convert chat context to Gemini format
         // Gemini role 'assistant' is 'model'
@@ -372,7 +367,11 @@ export function useNotes(options?: { onToast?: (msg: string, type: 'success' | '
         if (data.error) throw new Error(data.error.message || data.error.status);
         return data.candidates?.[0]?.content?.parts?.[0]?.text || "Gemini 没有返回内容";
       } else {
-        const url = `${settings.ai.url.replace(/\/$/, '')}/chat/completions`;
+        let baseUrl = settings.ai.openai.url || 'https://api.openai.com/v1';
+        if (!baseUrl.startsWith('http')) {
+            baseUrl = `https://${baseUrl}`;
+        }
+        const url = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
         
         const messages = [
             { role: "system", content: "你是一个善于思考和总结的助手。" },
@@ -384,10 +383,10 @@ export function useNotes(options?: { onToast?: (msg: string, type: 'success' | '
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${settings.ai.apiKey}`
+            'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            model: settings.ai.model || 'gpt-4o',
+            model: settings.ai.openai.model || 'gpt-4o',
             messages: messages
           })
         });
@@ -399,6 +398,26 @@ export function useNotes(options?: { onToast?: (msg: string, type: 'success' | '
       console.error("AI Generation Error", e);
       return `生成失败: ${e.message}`;
     }
+  };
+
+  const generateResumeBriefing = async (note: Note): Promise<string> => {
+    if (!note.flowSnapshot) return "欢迎回来，继续你的心流。\n";
+    
+    const prompt = `
+你是一个“脑镜像同步助手”。用户刚刚从中断中返回，请根据他上次离开时留下的“心流冷冻快照”，生成一句精炼、硬核、且具有“脑镜像同步”感的欢迎语，帮助他瞬间找回状态。
+
+快照内容：
+- 思维内存: ${note.flowSnapshot.mentalRam}
+- 逻辑快照: ${note.flowSnapshot.logicSnapshot}
+- 当时状态: ${note.flowSnapshot.state}
+
+要求：
+1. 极其简练（不超过 60 字）。
+2. 采用类似“同步中... 镜像已就绪”或“你上次卡在 X，现在继续吗？”的语气。
+3. 重点突出“你上次在哪里”和“为什么”。
+4. 不要废话。
+`;
+    return await generateAIResponse(prompt);
   };
 
   const generateFlowSnapshotContent = async (snapshot: FlowSnapshot, context?: string): Promise<string> => {
