@@ -50,10 +50,47 @@ const NoteCard: React.FC<NoteCardProps> = ({
 
   const processedContent = useMemo(() => {
     // Only process tags if NOT editing
-    return note.content.replace(
+    // Store code blocks and inline code temporarily
+    const codeBlocks: string[] = [];
+    let content = note.content;
+    
+    // Replace fenced code blocks first (```...```)
+    content = content.replace(/```[\s\S]*?```/g, (match) => {
+      codeBlocks.push(match);
+      return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
+    });
+    
+    // Replace inline code (`...`)
+    content = content.replace(/`[^`]+`/g, (match) => {
+      codeBlocks.push(match);
+      return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
+    });
+    
+    // Process tags, excluding:
+    // 1. Hex color codes (e.g., #FF00FF, #132843)
+    // 2. Pure numeric IDs (e.g., #12345)
+    content = content.replace(
       /(^|\s)(#[\w\u4e00-\u9fa5]+(?:\/[\w\u4e00-\u9fa5]+)*)/g,
-      "$1[$2](tag:$2)"
+      (match, prefix, tag) => {
+        const tagContent = tag.substring(1); // Remove leading #
+        // Skip if it's a pure hex color code (3, 6, or 8 hex digits)
+        if (/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$|^[0-9a-fA-F]{8}$/.test(tagContent)) {
+          return match; // Return original, don't convert to tag link
+        }
+        // Skip if it's pure numbers
+        if (/^\d+$/.test(tagContent)) {
+          return match;
+        }
+        return `${prefix}[${tag}](tag:${tag})`;
+      }
     );
+    
+    // Restore code blocks
+    content = content.replace(/__CODE_BLOCK_(\d+)__/g, (_, index) => {
+      return codeBlocks[parseInt(index)];
+    });
+    
+    return content;
   }, [note.content]);
 
   const handleSave = async () => {

@@ -50,10 +50,25 @@ export function useNotes(options?: { onToast?: (msg: string, type: 'success' | '
       uniqueDays.add(dateStr);
       activityMap.set(dateStr, (activityMap.get(dateStr) || 0) + 1);
 
-      const tagMatches = note.content.match(/#([\w\u4e00-\u9fa5]+(?:\/[\w\u4e00-\u9fa5]+)*)/g);
+      // Remove code blocks and inline code before extracting tags
+      let contentForTags = note.content;
+      // Remove fenced code blocks (```...```)
+      contentForTags = contentForTags.replace(/```[\s\S]*?```/g, '');
+      // Remove inline code (`...`)
+      contentForTags = contentForTags.replace(/`[^`]+`/g, '');
+      
+      const tagMatches = contentForTags.match(/#([\w\u4e00-\u9fa5]+(?:\/[\w\u4e00-\u9fa5]+)*)/g);
       if (tagMatches) {
         tagMatches.forEach(fullTag => {
-          const tagName = fullTag.substring(1); 
+          const tagName = fullTag.substring(1);
+          // Skip hex color codes (3, 6, or 8 hex digits)
+          if (/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$|^[0-9a-fA-F]{8}$/.test(tagName)) {
+            return;
+          }
+          // Skip pure numbers
+          if (/^\d+$/.test(tagName)) {
+            return;
+          }
           tagCounts.set(tagName, (tagCounts.get(tagName) || 0) + 1);
         });
       }
